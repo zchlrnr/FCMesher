@@ -25,8 +25,6 @@ FCMesher is a toolset for orphan mesh creation and manipulation.
 
 # Solid_mesh_by_thickened_shell_mesh
 
-    Takes in stuff and things test test test
-
 * Inputs:
     - Elementary shell mesh data structures and the thickness
     - nodes[NID] = [X_coordinte, Y_coordinate, Z_coordinate]
