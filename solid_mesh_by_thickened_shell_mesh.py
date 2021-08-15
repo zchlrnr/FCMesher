@@ -1,14 +1,25 @@
-# App = FreeCAD, Gui = FreeCADGui
-#import FreeCAD, Part, Fem
-
-#doc = App.ActiveDocument
 import re
 import math as m
 import numpy as np
+import shell_mesh_loft_between_two_curves
 
 def main():
-    """ Sweeps shell elements along nodal normals into CHEXA/CPENTA elements
-    #{{{
+    # hard code thickness by which to sweep the quads into hexes
+    thickness = 0.125
+    # make three points, defining a line 1
+    L1 = [[0.0, 0.0, 0.0], [1.0, 0.5, 0.0], [2.0, 0.0, 0.0]]
+    # make three points, defining a line 2
+    L2 = [[0.0, 0.0, 3.0], [1.0, 1.0, 3.0], [2.0, 0.0, 3.0]]
+    # There's elements along the curve X, and elements between the curves Y
+    N_e_X = 20
+    N_e_Y = 20
+
+    argument_stack_to_loft_solid_mesh = [thickness, L1, L2, N_e_X, N_e_Y]
+    data_back = solid_mesh_by_thickened_shell_mesh(\
+            argument_stack_to_loft_solid_mesh)
+
+def solid_mesh_by_thickened_shell_mesh(nodes, E2N, E2T): # {{{
+    """ Sweeps shell elements along node normals into CHEXA/CPENTA #{{{
     - [X] 2021.08.14 | Allow definition of 3 point quadratic curves
     - [X] 2021.08.14 | Make shell element E2N rules between curves
     - [X] 2021.08.14 | Make nodes of shell element mesh between curves
@@ -26,25 +37,7 @@ def main():
     - [ ] XXXX.XX.XX | Be able to recieve a mesh instead of making one
     - [ ] XXXX.XX.XX | Be able to compute E2NormVec for CTRIA elms with 3 nodes
     - [ ] XXXX.XX.XX | Be able to compute N2NormVec for CTRIA elms with 3 nodes
-
-    #}}}
-    """
-    # hard code thickness by which to sweep the quads into hexes
-    thickness = 0.125
-    # make three points, defining a line 1
-    L1 = [[0.0, 0.0, 0.0], [1.0, 0.5, 0.0], [2.0, 0.0, 0.0]]
-    # make three points, defining a line 2
-    L2 = [[0.0, 0.0, 3.0], [1.0, 1.0, 3.0], [2.0, 0.0, 3.0]]
-    # There's elements along the curve (X), and elements between the curves (Y)
-    N_e_X = 20
-    N_e_Y = 20
-
-    argument_stack_to_loft_solid_mesh = [thickness, L1, L2, N_e_X, N_e_Y]
-    returned_value = loft_solid_mesh(argument_stack_to_loft_solid_mesh)
-
-def loft_solid_mesh(*args): # {{{
-    """ Take in a variable number of args in, loft a solid mesh from a shell
-    """
+    """ # }}}
     if len(args[0]) == 0:
         print("Error in loft_solid_mesh.")
         print("No arguments passed into loft_solid_mesh function.")
@@ -586,9 +579,6 @@ def get_quadratic_coefs(list_input): # {{{
     
     return coefs_out
 # }}}
-
-if __name__ == '__main__':
-    main()
 
     """  E2T Specification {{{
          -----------------

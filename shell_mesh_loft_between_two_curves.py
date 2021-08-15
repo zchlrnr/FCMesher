@@ -60,6 +60,10 @@ def main():
     obj.ViewObject.BackfaceCulling = False
 
 def make_elements_of_ruled_mesh(N_elms_X, N_elms_Y): # {{{
+    """ Create E2N for iso CQUAD4 shell mesh
+    Takes in number of elements in X and number of elements in Y
+    E2N has node IDs and element Ids that will both start at 1
+    """
     Nx = N_elms_X + 1
     Ny = N_elms_Y + 1
     EID = 0

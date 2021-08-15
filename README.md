@@ -36,3 +36,28 @@ FCMesher is a toolset for orphan mesh creation and manipulation.
     - nodes[NID] = [X_coordinte, Y_coordinate, Z_coordinate]
     - E2N_offset[EID] = [NID1, NID2, NID3, NID4]
     - E2T_offset[EID] = [TypeID] 
+# E2T Specification
+
+ E2T Specification
+ -----------------
+   CBAR    :   1
+   CBUSH   :   2
+   CELAS1  :   3
+   CELAS2  :   4
+   CELAS3  :   5
+   CELAS4  :   6
+   CHEXA   :   7
+   CMASS1  :   8
+   CMASS2  :   9
+   CMASS3  :   10
+   CMASS4  :   11
+   CONM2   :   12
+   CONROD  :   13
+   CPENTA  :   14
+   CQUAD4  :   15
+   CQUAD4K :   16
+   CROD    :   17
+   CHEAR   :   18
+   CTETRA  :   19
+   CTRIA3  :   20
+   CTRIA3K :   21
