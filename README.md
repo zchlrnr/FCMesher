@@ -5,12 +5,13 @@ FCMesher is a toolset for orphan mesh creation and manipulation.
 
 ---
 
-[shell_mesh_loft_between_two_curves](###shell_mesh_loft_between_two_curves.py) |
-[solid mesh creation from shell mesh](###solid_mesh_by_thickened_shell_mesh.py)
+[shell_mesh_loft_between_two_curves](#shell_mesh_loft_between_two_curve) |
+[solid mesh creation from shell mesh](solid_mesh_by_thickened_shell_mesh)
 
 ---
 
-### shell_mesh_loft_between_two_curves
+# shell_mesh_loft_between_two_curves
+
 * Inputs:
     - Two lists of point locations representing two curves
     - L1 = [[x1L1, y1L1, z1L1],[x2L1, y2L1, z2L1],...[xnL1, ynL1, znL1]]
@@ -22,7 +23,8 @@ FCMesher is a toolset for orphan mesh creation and manipulation.
     - E2T[EID] = [TypeID] 
         - For a CQUAD4, the element type is 15
 
-### solid_mesh_by_thickened_shell_mesh
+# solid_mesh_by_thickened_shell_mesh
+
 * Inputs:
     - Elementary 
 * Outputs:
