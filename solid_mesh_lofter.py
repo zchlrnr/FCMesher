@@ -37,8 +37,8 @@ def main():
     # make three points, defining a line 2
     L2 = [[0.0, 0.0, 3.0], [1.0, 1.0, 3.0], [2.0, 0.0, 3.0]]
     # There's elements along the curve (X), and elements between the curves (Y)
-    N_e_X = 20
-    N_e_Y = 20
+    N_e_X = 30
+    N_e_Y = 30
 
     [nodes, E2N, E2T] = make_shell_mesh_between_curves(N_e_X, N_e_Y, L1, L2)
 
@@ -249,7 +249,7 @@ def write_gridpoint_data_to_file(filename, nodes_offset): # {{{
             L_x += 2 - len(back)
             x_string = "{x:.{L}f}".format(x=front, L=L_x - 1) + back
 
-        # if the strings contain E, subtract 2 from L
+        # if the strings contain E, subtract 1 from L to compensate
         matchy = re.search("E",y_string)
         if matchy:
             L_y += - 1
@@ -261,7 +261,7 @@ def write_gridpoint_data_to_file(filename, nodes_offset): # {{{
             L_y += 2 - len(back)
             y_string = "{y:.{L}f}".format(y=front, L=L_y - 1) + back
 
-        # if the strings contain E, subtract 2 from L
+        # if the strings contain E, subtract 1 from L to compensate
         matchz = re.search("E",z_string)
         if matchz:
             L_z += - 1
@@ -293,7 +293,7 @@ def create_thickened_E2N(E2N, nodes): # {{{
     # get highest element ID
     highest_EID = max(list(E2N.keys()))
     # get highest node ID
-    highest_NID = max(list(nodes.keys()))
+    NID_offset = list(nodes.keys())[int(len(nodes)/2)-1]
     # create E2N for hex elements
     E2N_offset = {}
     for E in list(E2N.keys()):
@@ -302,10 +302,10 @@ def create_thickened_E2N(E2N, nodes): # {{{
         N2 = E2N[E][1]
         N3 = E2N[E][2]
         N4 = E2N[E][3]
-        N5 = N1 + highest_NID
-        N6 = N2 + highest_NID
-        N7 = N3 + highest_NID
-        N8 = N4 + highest_NID
+        N5 = N1 + NID_offset
+        N6 = N2 + NID_offset
+        N7 = N3 + NID_offset
+        N8 = N4 + NID_offset
         E2N_offset[EID] = [N1, N2, N3, N4, N5, N6, N7, N8]
     return E2N_offset
     #}}}
