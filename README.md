@@ -39,7 +39,7 @@ FCMesher is a toolset for orphan mesh creation and manipulation.
 # E2T Specification
 
 | E2T Specification |
-|:--------:|:------:|
+| :------: | :----: |
 |  CBAR    |   1    |
 |  CBUSH   |   2    |
 |  CELAS1  |   3    |
