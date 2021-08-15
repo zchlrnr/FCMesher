@@ -37,28 +37,27 @@ FCMesher is a toolset for orphan mesh creation and manipulation.
     - E2N_offset[EID] = [NID1, NID2, NID3, NID4]
     - E2T_offset[EID] = [TypeID] 
 # E2T Specification
-
-
-  | E2T Specification |
-  | :------: | :----: |
-  |  CBAR    |   1    |
-  |  CBUSH   |   2    |
-  |  CELAS1  |   3    |
-  |  CELAS2  |   4    |
-  |  CELAS3  |   5    |
-  |  CELAS4  |   6    |
-  |  CHEXA   |   7    |
-  |  CMASS1  |   8    |
-  |  CMASS2  |   9    |
-  |  CMASS3  |   10   |
-  |  CMASS4  |   11   |
-  |  CONM2   |   12   |
-  |  CONROD  |   13   |
-  |  CPENTA  |   14   |
-  |  CQUAD4  |   15   |
-  |  CQUAD4K |   16   |
-  |  CROD    |   17   |
-  |  CHEAR   |   18   |
-  |  CTETRA  |   19   |
-  |  CTRIA3  |   20   |
-  |  CTRIA3K |   21   |
+<table>
+    <tr><th><b>Element</b></th><th><b>Type ID</b></th></tr>
+    <tr><th> CBAR    </th><th> 1  </th></tr>|
+    <tr><th> CBUSH   </th><th> 2  </th></tr>|
+    <tr><th> CELAS1  </th><th> 3  </th></tr>|
+    <tr><th> CELAS2  </th><th> 4  </th></tr>|
+    <tr><th> CELAS3  </th><th> 5  </th></tr>|
+    <tr><th> CELAS4  </th><th> 6  </th></tr>|
+    <tr><th> CHEXA   </th><th> 7  </th></tr>|
+    <tr><th> CMASS1  </th><th> 8  </th></tr>|
+    <tr><th> CMASS2  </th><th> 9  </th></tr>|
+    <tr><th> CMASS3  </th><th> 10 </th></tr>|
+    <tr><th> CMASS4  </th><th> 11 </th></tr>|
+    <tr><th> CONM2   </th><th> 12 </th></tr>|
+    <tr><th> CONROD  </th><th> 13 </th></tr>|
+    <tr><th> CPENTA  </th><th> 14 </th></tr>|
+    <tr><th> CQUAD4  </th><th> 15 </th></tr>|
+    <tr><th> CQUAD4K </th><th> 16 </th></tr>|
+    <tr><th> CROD    </th><th> 17 </th></tr>|
+    <tr><th> CHEAR   </th><th> 18 </th></tr>|
+    <tr><th> CTETRA  </th><th> 19 </th></tr>|
+    <tr><th> CTRIA3  </th><th> 20 </th></tr>|
+    <tr><th> CTRIA3K </th><th> 21 </th></tr>|
+</table>
