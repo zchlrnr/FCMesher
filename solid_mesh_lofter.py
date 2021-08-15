@@ -21,7 +21,7 @@ def main():
                        ideally be compliant with MSC Nastran
                        (wasn't compliant with MSC Nastran. No biggie.)
     - [X] 2021.08.14 | Refactor hard coded shell mesh to reside in a function
-    - [ ] 2021.08.14 | Write out mesh bdf from E2N, nodes, and E2T
+    - [X] 2021.08.14 | Write out mesh bdf from E2N, nodes, and E2T
     - [ ] XXXX.XX.XX | Make ID offsetting routine that reads arguments in
                        that can offset both element IDs and node IDs
     - [ ] XXXX.XX.XX | Be able to recieve a mesh instead of making one
