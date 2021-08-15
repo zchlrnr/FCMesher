@@ -3,8 +3,6 @@ FCMesher
 
 FCMesher is a toolset for orphan mesh creation and manipulation.
 
-# Features include but are not limited to
-
 ---
 
 [shell_mesh_loft_between_two_curves](###shell_mesh_loft_between_two_curves.py) |
