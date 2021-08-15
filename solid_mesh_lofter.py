@@ -5,7 +5,6 @@
 import re
 import math as m
 import numpy as np
-from scipy.spatial import KDTree
 
 def main():
     """ Sweeps shell elements along nodal normals into CHEXA/CPENTA elements
@@ -37,8 +36,31 @@ def main():
     # make three points, defining a line 2
     L2 = [[0.0, 0.0, 3.0], [1.0, 1.0, 3.0], [2.0, 0.0, 3.0]]
     # There's elements along the curve (X), and elements between the curves (Y)
-    N_e_X = 30
-    N_e_Y = 30
+    N_e_X = 20
+    N_e_Y = 20
+
+    argument_stack_to_loft_solid_mesh = [thickness, L1, L2, N_e_X, N_e_Y]
+    returned_value = loft_solid_mesh(argument_stack_to_loft_solid_mesh)
+
+def loft_solid_mesh(*args): # {{{
+    """ Take in a variable number of args in, loft a solid mesh from a shell
+    """
+    if len(args[0]) == 0:
+        print("Error in loft_solid_mesh.")
+        print("No arguments passed into loft_solid_mesh function.")
+        print("As of 2021.08.14, no behavior defined for this case.")
+        return
+    elif len(args[0]) == 5:
+        # First defined behavior, as of 2021.08.14
+        thickness = args[0][0]
+        L1 = args[0][1]
+        L2 = args[0][2]
+        N_e_X = args[0][3]
+        N_e_Y = args[0][4]
+    else:
+        print("Error in loft_solid_mesh.")
+        print("No defined behavior for number of arguments passed in.")
+        return
 
     [nodes, E2N, E2T] = make_shell_mesh_between_curves(N_e_X, N_e_Y, L1, L2)
 
@@ -68,6 +90,9 @@ def main():
 
     # writing out thickened bdf of solid elements
     write_out_thickened_bdf(nodes_offset, E2N_offset, E2T_offset)
+    return
+
+# }}}
 
 def write_out_thickened_bdf(nodes_offset, E2N, E2T): # {{{
     """ Write out primitive bdf of thickened solids from mesh
