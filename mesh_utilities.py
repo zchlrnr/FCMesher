@@ -17,6 +17,7 @@ def solid_mesh_by_thickened_shell_mesh(*args): # {{{
     - [X] 2021.08.14 | Refactor hard coded shell mesh to reside in a function
     - [X] 2021.08.14 | Write out mesh bdf from E2N, nodes, and E2T
     - [X] 2021.08.15 | Be able to recieve a mesh instead of making one
+    - [X] 2021.08.15 | Improve performance of get_N2NormVec
     - [ ] XXXX.XX.XX | Calibrate to return False if failed. True if works.
     - [ ] XXXX.XX.XX | Make ID offsetting routine that reads arguments in
                        that can offset both element IDs and node IDs
@@ -328,33 +329,34 @@ def create_thickened_nodes(nodes, thickness, N2NormVec): # {{{
     return nodes_offset
     # }}}
 
-def get_N2NormVec(E2NormVec, E2N, nodes): #{{{
-    """  Compute the normal vector for the nodes in the shell mesh
-    """
+def get_N2NormVec(E2NormVec, E2N, nodes): # {{{
     N2NormVec = {}
-    for NID in list(nodes.keys()):
-        # get elements with this node in it
-        elms_with_this_node = []
-        for EID in list(E2N.keys()):
-            for nids_in_this_elm in E2N[EID]:
-                if nids_in_this_elm == NID:
-                    elms_with_this_node.append(EID)
-        # Compute X, Y, and Z components
+    N2E = {}
+    
+    for EID, Element in E2N.items():
+        # go through nodes in every element
+        for NID in Element:
+            # if the node's not in N2E yet, prepare for it to be
+            if NID not in N2E:
+                N2E[NID] = []
+            # store the EID with that node ID we're on
+            N2E[NID].append(EID)
+
+    for NID in nodes:
+        elms_with_this_node = N2E[NID]
         X_comp = 0
         Y_comp = 0
         Z_comp = 0
         for EID in elms_with_this_node:
-            for v_EID in list(E2NormVec.keys()):
-                if v_EID == EID:
-                    X_comp += E2NormVec[v_EID][0]
-                    Y_comp += E2NormVec[v_EID][1]
-                    Z_comp += E2NormVec[v_EID][2]
+            X_comp += E2NormVec[EID][0]
+            Y_comp += E2NormVec[EID][1]
+            Z_comp += E2NormVec[EID][2]
         mag = ((X_comp**2) + (Y_comp**2) + (Z_comp**2))**0.5
         X = X_comp/mag
         Y = Y_comp/mag
         Z = Z_comp/mag
         N2NormVec[NID] = [X, Y, Z]
-    return N2NormVec 
+    return N2NormVec
 # }}}
 
 def get_E2NormVec(nodes, E2N): #{{{

@@ -12,8 +12,8 @@ L1 = [[0.0, 0.0, 0.0], [1.0, 0.5, 0.0], [2.0, 0.0, 0.0]]
 # make three points, defining a line 2
 L2 = [[0.0, 0.0, 3.0], [1.0, 1.0, 3.0], [2.0, 0.0, 3.0]]
 # There's elements along the curve X, and elements between the curves Y
-Number_of_elements_along_X = 2
-Number_of_elements_along_Y = 2
+Number_of_elements_along_X = 42
+Number_of_elements_along_Y = 42
 
 # Helper code to make the points along the curves
 # -----------------------------------------------
