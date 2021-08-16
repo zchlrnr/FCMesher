@@ -1,8 +1,7 @@
 import re
 import math as m
 import numpy as np
-from solid_mesh_by_thickened_shell_mesh import *
-from shell_mesh_loft_between_two_curves import *
+from mesh_utilities import *
 
 # Hard coded Values
 # -----------------
@@ -25,9 +24,9 @@ points_on_L2 = get_points_on_3_point_quadratic_fit(N_e_X, L2)
 
 # Calling the star of the show
 # ============================
-shell_mesh_loft_between_two_curves(points_on_L1, points_on_L2, N_e_X, N_e_Y):
+shell_mesh_loft_between_two_curves(points_on_L1, points_on_L2, N_e_X, N_e_Y)
 
-# [nodes, E2N, E2T] = make_shell_mesh_between_curves(N_e_X, N_e_Y, L1, L2)
+[nodes, E2N, E2T] = shell_mesh_loft_between_two_curves(N_e_X, N_e_Y, L1, L2)
 
 argument_stack = [thickness, nodes, E2N, E2T]
 data_back = solid_mesh_by_thickened_shell_mesh(argument_stack)
