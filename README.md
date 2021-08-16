@@ -14,6 +14,7 @@ FCMesher is a toolset for orphan mesh creation and manipulation.
 
 * Inputs:
     - Two lists of point locations representing two curves
+    - Two values for the number of elements along the curves, and between them
     - L1 = [[x1L1, y1L1, z1L1],[x2L1, y2L1, z2L1],...[xnL1, ynL1, znL1]]
     - L2 = [[x1L2, y1L2, z1L2],[x2L2, y2L2, z2L2],...[xnL2, ynL2, znL2]]
 * Outputs:
@@ -36,6 +37,7 @@ FCMesher is a toolset for orphan mesh creation and manipulation.
     - nodes[NID] = [X_coordinte, Y_coordinate, Z_coordinate]
     - E2N_offset[EID] = [NID1, NID2, NID3, NID4]
     - E2T_offset[EID] = [TypeID] 
+
 # E2T Specification
 <table>
     <tr><th><b>Element</b></th><th><b>Type ID</b></th></tr>
@@ -56,7 +58,7 @@ FCMesher is a toolset for orphan mesh creation and manipulation.
     <tr><th>   CQUAD4     </th><th>       15     </th></tr>
     <tr><th>   CQUAD4K    </th><th>       16     </th></tr>
     <tr><th>   CROD       </th><th>       17     </th></tr>
-    <tr><th>   CHEAR      </th><th>       18     </th></tr>
+    <tr><th>   CSHEAR     </th><th>       18     </th></tr>
     <tr><th>   CTETRA     </th><th>       19     </th></tr>
     <tr><th>   CTRIA3     </th><th>       20     </th></tr>
     <tr><th>   CTRIA3K    </th><th>       21     </th></tr>

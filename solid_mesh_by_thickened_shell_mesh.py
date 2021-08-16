@@ -1,24 +1,8 @@
 import re
 import math as m
 import numpy as np
-import shell_mesh_loft_between_two_curves
 
-def main():
-    # hard code thickness by which to sweep the quads into hexes
-    thickness = 0.125
-    # make three points, defining a line 1
-    L1 = [[0.0, 0.0, 0.0], [1.0, 0.5, 0.0], [2.0, 0.0, 0.0]]
-    # make three points, defining a line 2
-    L2 = [[0.0, 0.0, 3.0], [1.0, 1.0, 3.0], [2.0, 0.0, 3.0]]
-    # There's elements along the curve X, and elements between the curves Y
-    N_e_X = 20
-    N_e_Y = 20
-
-    argument_stack_to_loft_solid_mesh = [thickness, L1, L2, N_e_X, N_e_Y]
-    data_back = solid_mesh_by_thickened_shell_mesh(\
-            argument_stack_to_loft_solid_mesh)
-
-def solid_mesh_by_thickened_shell_mesh(nodes, E2N, E2T): # {{{
+def solid_mesh_by_thickened_shell_mesh(*args): # {{{
     """ Sweeps shell elements along node normals into CHEXA/CPENTA #{{{
     - [X] 2021.08.14 | Allow definition of 3 point quadratic curves
     - [X] 2021.08.14 | Make shell element E2N rules between curves
@@ -32,9 +16,10 @@ def solid_mesh_by_thickened_shell_mesh(nodes, E2N, E2T): # {{{
                        (wasn't compliant with MSC Nastran. No biggie.)
     - [X] 2021.08.14 | Refactor hard coded shell mesh to reside in a function
     - [X] 2021.08.14 | Write out mesh bdf from E2N, nodes, and E2T
+    - [X] 2021.08.15 | Be able to recieve a mesh instead of making one
+    - [ ] XXXX.XX.XX | Calibrate to return False if failed. True if works.
     - [ ] XXXX.XX.XX | Make ID offsetting routine that reads arguments in
                        that can offset both element IDs and node IDs
-    - [ ] XXXX.XX.XX | Be able to recieve a mesh instead of making one
     - [ ] XXXX.XX.XX | Be able to compute E2NormVec for CTRIA elms with 3 nodes
     - [ ] XXXX.XX.XX | Be able to compute N2NormVec for CTRIA elms with 3 nodes
     """ # }}}
@@ -42,20 +27,16 @@ def solid_mesh_by_thickened_shell_mesh(nodes, E2N, E2T): # {{{
         print("Error in loft_solid_mesh.")
         print("No arguments passed into loft_solid_mesh function.")
         print("As of 2021.08.14, no behavior defined for this case.")
-        return
-    elif len(args[0]) == 5:
-        # First defined behavior, as of 2021.08.14
+        return False
+    elif len(args[0]) == 4:
         thickness = args[0][0]
-        L1 = args[0][1]
-        L2 = args[0][2]
-        N_e_X = args[0][3]
-        N_e_Y = args[0][4]
+        nodes = args[0][1]
+        E2N = args[0][2]
+        E2T = args[0][3]
     else:
         print("Error in loft_solid_mesh.")
         print("No defined behavior for number of arguments passed in.")
-        return
-
-    [nodes, E2N, E2T] = make_shell_mesh_between_curves(N_e_X, N_e_Y, L1, L2)
+        return False
 
     # Construct element ID to normal vector data structure
     E2NormVec = get_E2NormVec(nodes, E2N)
@@ -79,16 +60,16 @@ def solid_mesh_by_thickened_shell_mesh(nodes, E2N, E2T): # {{{
         else:
             print("Error in solid_mesh_lofter.")
             print("Unknown solid element type requesting E2T in E2T_offset.")
-            return
+            return False
 
     # writing out thickened bdf of solid elements
-    write_out_thickened_bdf(nodes_offset, E2N_offset, E2T_offset)
-    return
-
+    did_it_work = write_out_thickened_bdf(nodes_offset, E2N_offset, E2T_offset)
+    return did_it_work
 # }}}
 
 def write_out_thickened_bdf(nodes_offset, E2N, E2T): # {{{
     """ Write out primitive bdf of thickened solids from mesh
+    Void type function. Has no return statement.
     Two element types anticipated are 7 and 14 for CHEXA and PENTA
     """
     E2N_offset = E2N
@@ -122,7 +103,6 @@ def write_out_thickened_bdf(nodes_offset, E2N, E2T): # {{{
     f = open(filename, "a")
     f.write("ENDDATA")
     f.close
-    return
 # }}}
 
 def write_hex_and_pent_data(filename, E2N, E2T, MID, PID): # {{{
@@ -418,189 +398,3 @@ def get_E2NormVec(nodes, E2N): #{{{
     return E2NormVec
     #}}}
 
-def make_shell_mesh_between_curves(Nx, Ny, L1, L2): # {{{
-    """ Make nodes, E2N, and E2T given two lists of curves to rule between
-    Makes ruled shell mesh between curves of 4 noded quad elements
-    """
-    N_elms_X = Nx
-    N_elms_Y = Ny
-
-    # get the nodes on Line 1
-    points_on_L1 = get_points_on_3_point_quadratic_fit(N_elms_X, L1)
-
-    # get the nodes on Line 2
-    points_on_L2 = get_points_on_3_point_quadratic_fit(N_elms_X, L2)
-
-    # Make shell elements ruling between the two surfaces
-    # Construct E2N [Element ID to Node ID]
-    E2N = make_elements_of_ruled_mesh(N_elms_X, N_elms_Y)
-
-    # Make nodes on shell mesh ruled between lines
-    nodes = make_nodes_of_ruled_mesh(points_on_L1, points_on_L2, N_elms_Y)
-
-    # Populate E2T for Ruled mesh created between L1 and L2
-    E2T = {}
-    for E in list(E2N.keys()):
-        # CQUAD4 element type is 15
-        E2T[E] = 15
-
-    return [nodes, E2N, E2T]
-# }}}
-
-def make_nodes_of_ruled_mesh(Nodes_1, Nodes_2, N_elms_Y): #{{{
-    """ Make nodes by tracing the streamlines of the surface
-    """
-    nodes = {}
-    # first set of nodes will be from Nodes_On_Curve_1
-    NID = 0
-    for i in range(N_elms_Y+1):
-        for j in range(len(Nodes_1)):
-            NID = NID + 1
-            # Get coordinates of the node on Curve 1
-            x1 = Nodes_1[j][0]
-            y1 = Nodes_1[j][1]
-            z1 = Nodes_1[j][2]
-            # Get coordinates of the node on Curve 2
-            x2 = Nodes_2[j][0]
-            y2 = Nodes_2[j][1]
-            z2 = Nodes_2[j][2]
-            # get location of current node in ruled surf
-            x = (x2-x1)*(i/N_elms_Y) + x1
-            y = (y2-y1)*(i/N_elms_Y) + y1
-            z = (z2-z1)*(i/N_elms_Y) + z1
-            nodes[NID] = [x, y, z]
-    return nodes #}}}
-
-def make_elements_of_ruled_mesh(N_elms_X, N_elms_Y): #{{{#
-    """ Create the E2N for the ruled mesh with 
-    """
-    Nx = N_elms_X + 1
-    Ny = N_elms_Y + 1
-    EID = 0
-    E2N = {}
-    for j in range(Ny):
-        for i in range(Nx):
-            NID = 1 + Nx*j + i
-            # skip rolling over elements
-            if i == (Nx - 1) or j == (Ny - 1):
-                continue
-            EID += 1
-            N1 = NID
-            N2 = 1 + Nx*(j+1) + i
-            N3 = N2 + 1
-            N4 = N1 + 1
-            E2N[EID] = [N1, N2, N3, N4]
-    return E2N # }}}
-
-def get_points_on_3_point_quadratic_fit(N_elms, points): # {{{
-    """ given a number of elements, and 3 points defining a spline,
-    compute the nodes on that thingy
-    """
-    nodes = []
-    coefs_1 = get_quadratic_coefs(points)
-    # unpacking x coord coeficients 
-    ax = coefs_1[0][0]
-    bx = coefs_1[0][1]
-    cx = coefs_1[0][2]
-    # unpacking y coord coeficients 
-    ax = coefs_1[0][0]
-    ay = coefs_1[1][0]
-    by = coefs_1[1][1]
-    cy = coefs_1[1][2]
-    # unpacking y coord coeficients 
-    az = coefs_1[2][0]
-    bz = coefs_1[2][1]
-    cz = coefs_1[2][2]
-    N_nodes = N_elms + 1
-    for i in range(N_nodes):
-        t = i/N_elms
-        x = ax*t**2 + bx*t + cx
-        y = ay*t**2 + by*t + cy
-        z = az*t**2 + bz*t + cz
-        nodes.append([x, y, z])
-    return nodes
-# }}}
-
-def get_quadratic_coefs(list_input): # {{{
-    """ Get the coeficients for a best fit quadratic
-    """
-    coefs_out = []
-
-    X = list(list(zip(*list_input))[0])
-    Y = list(list(zip(*list_input))[1])
-    Z = list(list(zip(*list_input))[2])
-
-    # setting parametric parameters
-    t1 = 0.0
-    t2 = 0.5
-    t3 = 1.0
-
-    # getting parametric equation for X coords
-    DX_inp = [[t1**2, t2**2, t3**2], [t1, t2, t3], [1, 1, 1]]
-    DX = np.linalg.det(np.array(DX_inp))
-    D1X_inp = [[X[0], X[1], X[2]], [t1, t2, t3], [1, 1, 1]]
-    D1X = np.linalg.det(np.array(D1X_inp))
-    D2X_inp = [[t1**2, t2**2, t3**2], [X[0], X[1], X[2]], [1, 1, 1]]
-    D2X = np.linalg.det(np.array(D2X_inp))
-    D3X_inp = [[t1**2, t2**2, t3**2], [t1, t2, t3], [X[0], X[1], X[2]]]
-    D3X = np.linalg.det(np.array(D3X_inp))
-    aX = D1X / DX
-    bX = D2X / DX
-    cX = D3X / DX
-    coefs_out.append([aX, bX, cX])
-
-    # getting parametric equation for Y coords
-    DY_inp = [[t1**2, t2**2, t3**2], [t1, t2, t3], [1, 1, 1]]
-    DY = np.linalg.det(np.array(DY_inp))
-    D1Y_inp = [[Y[0], Y[1], Y[2]], [t1, t2, t3], [1, 1, 1]]
-    D1Y = np.linalg.det(np.array(D1Y_inp))
-    D2Y_inp = [[t1**2, t2**2, t3**2], [Y[0], Y[1], Y[2]], [1, 1, 1]]
-    D2Y = np.linalg.det(np.array(D2Y_inp))
-    D3Y_inp = [[t1**2, t2**2, t3**2], [t1, t2, t3], [Y[0], Y[1], Y[2]]]
-    D3Y = np.linalg.det(np.array(D3Y_inp))
-    aY = D1Y / DY
-    bY = D2Y / DY
-    cY = D3Y / DY
-    coefs_out.append([aY, bY, cY])
-
-    # getting parametric equation for Z coords
-    DZ_inp = [[t1**2, t2**2, t3**2], [t1, t2, t3], [1, 1, 1]]
-    DZ = np.linalg.det(np.array(DZ_inp))
-    D1Z_inp = [[Z[0], Z[1], Z[2]], [t1, t2, t3], [1, 1, 1]]
-    D1Z = np.linalg.det(np.array(D1Z_inp))
-    D2Z_inp = [[t1**2, t2**2, t3**2], [Z[0], Z[1], Z[2]], [1, 1, 1]]
-    D2Z = np.linalg.det(np.array(D2Z_inp))
-    D3Z_inp = [[t1**2, t2**2, t3**2], [t1, t2, t3], [Z[0], Z[1], Z[2]]]
-    D3Z = np.linalg.det(np.array(D3Z_inp))
-    aZ = D1Z / DZ
-    bZ = D2Z / DZ
-    cZ = D3Z / DZ
-    coefs_out.append([aZ, bZ, cZ])
-    
-    return coefs_out
-# }}}
-
-    """  E2T Specification {{{
-         -----------------
-           CBAR    :   1
-           CBUSH   :   2
-           CELAS1  :   3
-           CELAS2  :   4
-           CELAS3  :   5
-           CELAS4  :   6
-           CHEXA   :   7
-           CMASS1  :   8
-           CMASS2  :   9
-           CMASS3  :   10
-           CMASS4  :   11
-           CONM2   :   12
-           CONROD  :   13
-           CPENTA  :   14
-           CQUAD4  :   15
-           CQUAD4K :   16
-           CROD    :   17
-           CHEAR   :   18
-           CTETRA  :   19
-           CTRIA3  :   20
-           CTRIA3K :   21
-    """ # }}}
