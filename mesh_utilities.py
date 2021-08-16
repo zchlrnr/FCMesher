@@ -421,8 +421,8 @@ def make_elements_of_ruled_mesh(N_elms_X, N_elms_Y): # {{{
     Takes in number of elements in X and number of elements in Y
     E2N has node IDs and element Ids that will both start at 1
     """
+    assert isinstance(N_elms_X,int)
     Nx = N_elms_X + 1
-    print(Nx)
     Ny = N_elms_Y + 1
     EID = 0
     E2N = {}
