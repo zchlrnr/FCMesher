@@ -329,10 +329,9 @@ def create_thickened_nodes(nodes, thickness, N2NormVec): # {{{
     return nodes_offset
     # }}}
 
-def get_N2NormVec(E2NormVec, E2N, nodes): # {{{
-    N2NormVec = {}
-    N2E = {}
-    
+def get_N2E(E2N): # {{{
+    """ Turns the E2N around, giving a dict of N2E
+    """
     for EID, Element in E2N.items():
         # go through nodes in every element
         for NID in Element:
@@ -341,7 +340,12 @@ def get_N2NormVec(E2NormVec, E2N, nodes): # {{{
                 N2E[NID] = []
             # store the EID with that node ID we're on
             N2E[NID].append(EID)
+# }}}
 
+def get_N2NormVec(E2NormVec, E2N, nodes): # {{{
+    N2NormVec = {}
+    N2E = get_N2E(E2N)
+    
     for NID in nodes:
         elms_with_this_node = N2E[NID]
         X_comp = 0
