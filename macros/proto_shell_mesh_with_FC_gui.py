@@ -229,10 +229,11 @@ def make_elements_of_ruled_mesh(N_elms_X, N_elms_Y): # {{{
     return E2N
 # }}}
 
-def get_nodes_from_curve(Curve_Handle, N_elms): 
+def get_nodes_from_curve(Curve_Handle, N_elms): #{{{
     return tuple((n.x, n.y, n.z) for n in Curve_Handle.discretize(N_elms+1))
+# }}}
 
-def make_nodes_of_ruled_mesh(Nodes_1, Nodes_2, N_elms_Y):
+def make_nodes_of_ruled_mesh(Nodes_1, Nodes_2, N_elms_Y): # {{{
     # Make nodes by tracing the streamlines of the surface
     nodes = []
     # first set of nodes will be from N_Curve_1
@@ -250,6 +251,7 @@ def make_nodes_of_ruled_mesh(Nodes_1, Nodes_2, N_elms_Y):
             z = (z2-z1)*(i/N_elms_Y) + z1
             nodes.append([x, y, z, NID])
     return nodes
+# }}}
 
 if __name__ == '__main__':
     N_elms_X, N_elms_Y = 5, 3
