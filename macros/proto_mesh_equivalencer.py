@@ -163,6 +163,7 @@ def get_E2N_nodes_and_E2T(mesh_objects_to_merge): # {{{
     - [ ] Make it also return an E2T once other element types are supported
     """
 
+    mesh_types_expected = []
     # check all mesh entities for pre-coded types # {{{
     for obj in mesh_objects_to_merge:
         # if there are any edge elements, raise error and abort
@@ -172,6 +173,8 @@ def get_E2N_nodes_and_E2T(mesh_objects_to_merge): # {{{
         elif obj.TriangleCount != 0:
             s = "Triangles not supported as of 2021.08.22"
             raise ValueError(s)
+        elif obj.QuadrangleCount !=0:
+            mesh_types_expected.append(15)
         elif obj.HexaCount != 0:
             s = "Hexas not supported as of 2021.08.22"
             raise ValueError(s)
@@ -188,6 +191,8 @@ def get_E2N_nodes_and_E2T(mesh_objects_to_merge): # {{{
             s = "Prisms not supported as of 2021.08.22"
             raise ValueError(s)
     # }}}
+    mesh_types_expected = list(set(mesh_types_expected))
+
 
     # get [body ID, node ID old, node ID new]
     nid_transform = []
@@ -247,7 +252,18 @@ def get_E2N_nodes_and_E2T(mesh_objects_to_merge): # {{{
         new_NID = n[2]
         obj = mesh_objects_to_merge[body_index]
         nodes[new_NID] = list(obj.Nodes[old_NID])
-    return [E2N, nodes]
+
+    # check that there was only one type of element, and it was 15 (CQUAD4)
+
+    E2T = {}
+    if len(mesh_types_expected) == 1 and mesh_types_expected[0] == 15:
+        # Populate the E2T
+        for e in E2N:
+            E2T[e] = 15
+    else:
+        raise ValueError("Unknown elements passed into mesh equivalencer.")
+
+    return [E2N, E2T, nodes]
 #}}}
 
 def main(): # {{{
@@ -263,6 +279,7 @@ def main(): # {{{
     - [X] Implement error handling in get_combined_E2N_and_nodes
           with the explicit goal of capturing elements not supported
     - [X] Rework get_combined_E2N_and_nodes to skip gaps and be correct
+    - [ ] Make mesh entity from nodes, E2N, and E2T
     ...
     - [ ] Generalize code for all of the element element types
     - [ ] Deal with fact that coordinates and properties can refer to node IDs
@@ -277,10 +294,10 @@ def main(): # {{{
     # if there is nothing selected, raise an error
     if len(mesh_objects_to_merge) == 0:
         raise ValueError("No mesh entities selected.")
-    
 
-    [E2N, nodes] = get_E2N_nodes_and_E2T(mesh_objects_to_merge)
+    [E2N, E2T, nodes] = get_E2N_nodes_and_E2T(mesh_objects_to_merge)
 
+    # Hard coded equivalencing tolerance
     tol = 0.01 
 
     node_replacement_array = get_node_equivalence_replacement_array(nodes, tol)
@@ -334,6 +351,7 @@ def main(): # {{{
         for i in n:
             nodes_in_E2N_flat.append(i)
     nodes_in_E2N = list(set(nodes_in_E2N_flat))
+
     # nodes in nodes that aren't in nodes_in_E2N need to be deleted
     new_nodes = {}
     for n in list(nodes.keys()):
@@ -341,7 +359,25 @@ def main(): # {{{
             new_nodes[n] = nodes[n]
     nodes = new_nodes
 
+    # As of 2021.08.26, know that everything here is probably
+    # CQUAD4 shell elements.
+    print(nodes)
+    equivalenced_mesh = Fem.FemMesh()
+    for n in list(nodes.keys()):
+        equivalenced_mesh.addNode(*[*nodes[n], n])
+    for e in list(E2N.keys()):
+        print(E2N[e],e)
+        equivalenced_mesh.addFace(E2N[e],e)
 
+    # Making it render correctly
+    doc = App.ActiveDocument
+    obj = doc.addObject("Fem::FemMeshObject", "equivalenced_mesh")
+    obj.FemMesh = equivalenced_mesh
+    obj.Placement.Base = FreeCAD.Vector(0, 0, 0)
+    obj.ViewObject.DisplayMode = "Faces, Wireframe & Nodes"
+    obj.ViewObject.BackfaceCulling = False
+    
+    doc.recompute()
 # }}}
 
 if __name__ == '__main__':
