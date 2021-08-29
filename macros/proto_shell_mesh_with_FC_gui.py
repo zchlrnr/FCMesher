@@ -9,12 +9,13 @@ class Form(QtGui.QDialog): # {{{
     N_elms_X = 5
     N_elms_Y = 3
     
-    def __init__(self):
+    def __init__(self): # {{{
         super(Form, self).__init__()
         self.setModal(True)
         self.makeUI()
+    # }}}
         
-    def makeUI(self):
+    def makeUI(self): # {{{
         
         labelx = QtGui.QLabel('X elements')
         spinx = self.spinx = QtGui.QSpinBox()
@@ -38,15 +39,18 @@ class Form(QtGui.QDialog): # {{{
         
         self.setLayout(layout)
         self.show()
+    # }}}
 
-    def get_values(self):
+    def get_values(self): # {{{
         return self.N_elms_X, self.N_elms_Y
+    #}}}
 
-    def make_mesh(self):
+    def make_mesh(self): #{{{
         self.N_elms_X = self.spinx.value()
         self.N_elms_Y = self.spiny.value()
         main(self.N_elms_X, self.N_elms_Y)
         self.close()
+        #}}}
 # }}}
 
 def main(N_elms_X, N_elms_Y): # {{{
