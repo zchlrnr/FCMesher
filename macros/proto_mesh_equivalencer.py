@@ -298,7 +298,7 @@ def main(): # {{{
     [E2N, E2T, nodes] = get_E2N_nodes_and_E2T(mesh_objects_to_merge)
 
     # Hard coded equivalencing tolerance
-    tol = 0.01 
+    tol = 0.01
 
     node_replacement_array = get_node_equivalence_replacement_array(nodes, tol)
     # if there's nothing to replace, throw error/message idk
