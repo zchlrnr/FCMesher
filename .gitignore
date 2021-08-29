@@ -3,3 +3,4 @@ makefile
 kdtree_test.py
 *bdf
 __pycache__
+Resources/
