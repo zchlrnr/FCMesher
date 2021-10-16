@@ -89,8 +89,13 @@ FCMesher is a toolset for orphan mesh creation and manipulation.
     <tr><th><b>  Material  </b></th><th><b>Material Type ID</b></th></tr>
     <tr><th>   [default]       </th><th>         0             </th></tr>
     <tr><th>     MAT1          </th><th>         1             </th></tr>
-    <tr><th>     MAT2          </th><th>         1             </th></tr>
-    <tr><th>     MAT8          </th><th>         1             </th></tr>
-    <tr><th>     MAT9          </th><th>         1             </th></tr>
-    <tr><th>     PMASS         </th><th>         1             </th></tr>
+    <tr><th>     MAT2          </th><th>         2             </th></tr>
+    <tr><th>     MAT8          </th><th>         3             </th></tr>
+    <tr><th>     MAT9          </th><th>         4             </th></tr>
+    <tr><th>     PMASS         </th><th>         5             </th></tr>
+
+    * By default:
+        - 1D elements will have no material property
+        - 2D elements will have a MAT1 property
+        - 3D elements will have a MAT1 property
 </table>
