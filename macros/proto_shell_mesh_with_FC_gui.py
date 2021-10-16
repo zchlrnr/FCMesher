@@ -20,12 +20,12 @@ class Form(QtGui.QDialog): # {{{
         labelx = QtGui.QLabel('X elements')
         spinx = self.spinx = QtGui.QSpinBox()
         spinx.setValue(self.N_elms_X)
-        spinx.setRange(1, 100)
+        spinx.setRange(1, 500)
         
         labely = QtGui.QLabel('Y elements')
         spiny = self.spiny = QtGui.QSpinBox()
         spiny.setValue(self.N_elms_Y)
-        spiny.setRange(1, 100)
+        spiny.setRange(1, 500)
 
         btn = self.btn = QtGui.QPushButton('Mesh')
         btn.clicked.connect(self.make_mesh)
