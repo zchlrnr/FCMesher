@@ -27,7 +27,7 @@ class Form(QtGui.QDialog): # {{{
         label_layers = QtGui.QLabel('N_layers')
         spin_layers = self.spin_layers = QtGui.QSpinBox()
         spin_layers.setValue(self.N_layers)
-        spin_layers.setRange(1, 100)
+        spin_layers.setRange(1, 1000)
        
         label_thickness = QtGui.QLabel('total thickness')
         thickness_field = self.thickness_field = QtGui.QLineEdit(str(self.thickness))
