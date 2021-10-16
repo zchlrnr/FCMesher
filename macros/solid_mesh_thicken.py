@@ -1,17 +1,62 @@
 # App = FreeCAD, Gui = FreeCADGui
+from copy import copy as copy
 import FreeCAD, Part, Fem
 from PySide import QtGui
 import os
 import sys
 import numpy as np
 from scipy.spatial import KDTree
-current = os.path.dirname(os.path.realpath(__file__)) 
-parent = os.path.dirname(current)
-sys.path.append(parent)
-from mesh_utilities import *
 
 Vector = App.Vector
 
+class Form(QtGui.QDialog): # {{{
+    """ Set N_layers and total thickness
+    """
+    # savior --> https://doc.qt.io/qtforpython/tutorials/basictutorial/dialog.html
+    # https://zetcode.com/gui/pysidetutorial/layoutmanagement/
+    N_layers = 3
+    thickness = 1
+    
+    def __init__(self): # {{{
+        super(Form, self).__init__()
+        self.setModal(True)
+        self.makeUI()
+        # }}}
+        
+    def makeUI(self): # {{{
+        label_layers = QtGui.QLabel('N_layers')
+        spin_layers = self.spin_layers = QtGui.QSpinBox()
+        spin_layers.setValue(self.N_layers)
+        spin_layers.setRange(1, 100)
+       
+        label_thickness = QtGui.QLabel('total thickness')
+        thickness_field = self.thickness_field = QtGui.QLineEdit(str(self.thickness))
+
+        btn = self.btn = QtGui.QPushButton('Thicken Shell Mesh')
+        btn.clicked.connect(self.make_mesh)
+        
+        layout = QtGui.QGridLayout()
+        layout.addWidget(label_layers, 0, 0)
+        layout.addWidget(spin_layers, 0, 1)
+        layout.addWidget(label_thickness, 1, 0)
+        layout.addWidget(thickness_field, 1, 1)
+        layout.addWidget(btn, 2, 1)
+        
+        self.setLayout(layout)
+        self.show()
+    # }}}
+
+    def get_values(self): # {{{
+        return self.N_layers, self.thickness
+    # }}}
+
+    def make_mesh(self): # {{{
+        self.N_layers = self.spin_layers.value()
+        self.thickness = float(self.thickness_field.text())
+        main(self.N_layers, self.thickness)
+        self.close()
+    # }}}
+# }}}
 def get_E2N_nodes_and_E2T(mesh_objects_to_merge): # {{{
     """ takes in FemMesh objects, returns a combined E2N and nodes
     - [ ] Make it also return an E2T once other element types are supported
@@ -118,8 +163,114 @@ def get_E2N_nodes_and_E2T(mesh_objects_to_merge): # {{{
 
     return [E2N, E2T, nodes]
 #}}}
-
-def main(): # {{{
+def get_E2NormVec(nodes, E2N): #{{{
+    """ Compute the normal vector elements
+    """
+    E2NormVec = {}
+    for EID in list(E2N.keys()):
+        NodeIDs = E2N[EID]
+        these_nodes = []
+        for N in NodeIDs:
+            # get the X coord of this node ID
+            for i in list(nodes.keys()):
+                if i == N:
+                    x = nodes[i][0]
+                    y = nodes[i][1]
+                    z = nodes[i][2]
+                    these_nodes.append([N, x, y, z])
+        # compute every normal vector possible
+        N = these_nodes
+        # Get coordinates of all four points
+        P1 = np.array([N[0][1], N[0][2], N[0][3]])
+        P2 = np.array([N[1][1], N[1][2], N[1][3]])
+        P3 = np.array([N[2][1], N[2][2], N[2][3]])
+        P4 = np.array([N[3][1], N[3][2], N[3][3]])
+        # Get vectors encircling the element
+        V12 = P2 - P1
+        V23 = P3 - P2
+        V34 = P4 - P3
+        V41 = P1 - P4
+        # Get all the cross products
+        NV1 = np.cross(V12, V23)
+        NV2 = np.cross(V23, V34)
+        NV3 = np.cross(V34, V41)
+        NV4 = np.cross(V41, V12)
+        # Compute average of all these vectors
+        NV = NV1 + NV2 + NV3 + NV4
+        # Normalize the magnitude
+        mag = (NV[0]**2 + NV[1]**2 + NV[2]**2)**0.5
+        NV = NV/mag
+        E2NormVec[EID]= [NV[0], NV[1], NV[2]]
+    return E2NormVec
+    #}}}
+def get_N2NormVec(E2NormVec, E2N, nodes): # {{{
+    N2NormVec = {}
+    N2E = get_N2E(E2N)
+    
+    for NID in nodes:
+        elms_with_this_node = N2E[NID]
+        X_comp = 0
+        Y_comp = 0
+        Z_comp = 0
+        for EID in elms_with_this_node:
+            X_comp += E2NormVec[EID][0]
+            Y_comp += E2NormVec[EID][1]
+            Z_comp += E2NormVec[EID][2]
+        mag = ((X_comp**2) + (Y_comp**2) + (Z_comp**2))**0.5
+        X = X_comp/mag
+        Y = Y_comp/mag
+        Z = Z_comp/mag
+        N2NormVec[NID] = [X, Y, Z]
+    return N2NormVec
+# }}}
+def get_N2E(E2N): # {{{
+    """ Turns the E2N around, giving a dict of N2E
+    """
+    N2E = {}
+    for EID, Element in E2N.items():
+        # go through nodes in every element
+        for NID in Element:
+            # if the node's not in N2E yet, prepare for it to be
+            if NID not in N2E:
+                N2E[NID] = []
+            # store the EID with that node ID we're on
+            N2E[NID].append(EID)
+    return N2E
+# }}}
+def get_new_nodes(N_layers, thickness, nodes, N2NormVec): # {{{
+    # create nodes translated to the correct positions as new_nodes
+    new_nodes = {}
+    node_ID_offset = 0
+    for layer in range(N_layers+1):
+        # get vector magnitude
+        mag = layer * (thickness / N_layers)
+        for node in nodes.keys():
+            x = nodes[node][0] + mag * N2NormVec[node][0]
+            y = nodes[node][1] + mag * N2NormVec[node][1]
+            z = nodes[node][2] + mag * N2NormVec[node][2]
+            new_nodes[node + node_ID_offset] = [x, y, z]
+        node_ID_offset += len(nodes.keys())
+    return new_nodes
+# }}}
+def get_new_E2N(E2N, nodes, N_layers): # {{{
+    new_E2N = {}
+    element_ID_offset = 0
+    for layer in range(N_layers):
+        for element in E2N.keys():
+            N1 = E2N[element][0] + layer * len(nodes.keys())
+            N2 = E2N[element][1] + layer * len(nodes.keys())
+            N3 = E2N[element][2] + layer * len(nodes.keys())
+            N4 = E2N[element][3] + layer * len(nodes.keys())
+            N5 = E2N[element][0] + (layer + 1) * len(nodes.keys())
+            N6 = E2N[element][1] + (layer + 1) * len(nodes.keys())
+            N7 = E2N[element][2] + (layer + 1) * len(nodes.keys())
+            N8 = E2N[element][3] + (layer + 1) * len(nodes.keys())
+            new_EID = element + element_ID_offset
+            new_E2N[new_EID] = [N1, N2, N3, N4, N5, N6, N7, N8]
+        element_ID_offset += len(E2N.keys())
+    return new_E2N
+# }}}
+def main(N_layers, thickness): # {{{
     # gather FemMeshObject instances from selections
     mesh_objects_to_merge = [] 
     # gather edges from selection
@@ -156,18 +307,46 @@ def main(): # {{{
 
     [E2N, E2T, nodes] = get_E2N_nodes_and_E2T(mesh_objects_to_merge)
 
-    N_elms = 2
-    thickness = 10
+    # Construct element ID to normal vector data structure
+    E2NormVec = get_E2NormVec(nodes, E2N)
 
-    # Thickening the shell mesh into a solid mesh
-    argument_stack = [thickness, nodes, E2N, E2T, N_elms]
-    # need to figure out where the printed 1 and 2 are coming from
-    data_back = solid_mesh_by_thickened_shell_mesh_normals(argument_stack)
-    nodes_offset = data_back[0]
-    E2N_offset = data_back[1]
-    E2T_offset = data_back[2]
+    # Construct node ID to normal vector data structure
+    N2NormVec = get_N2NormVec(E2NormVec, E2N, nodes)
+
+    # create nodes translated to the correct positions as new_nodes
+    new_nodes =  get_new_nodes(N_layers, thickness, nodes, N2NormVec)
+
+    # create elements calling out the new_nodes
+    new_E2N = get_new_E2N(E2N, nodes, N_layers)
+
+    # Now have new_E2N and new_nodes
+
+    # create new FemMesh container called thickened
+    thickened = Fem.FemMesh()
+
+    # add all of the nodes to new container
+    for node in new_nodes.keys():
+        x = new_nodes[node][0]
+        y = new_nodes[node][1]
+        z = new_nodes[node][2]
+        thickened.addNode(x, y, z, node)
+
+    # create the elements of this container
+    for element in new_E2N.keys():
+        thickened.addVolume([*new_E2N[element]], element)
+
+    # set graphical object to render correctly
+    doc = App.ActiveDocument
+    obj = doc.addObject("Fem::FemMeshObject", "thickened")
+    obj.FemMesh = thickened 
+    obj.Placement.Base = FreeCAD.Vector(0, 0, 0)
+    obj.ViewObject.DisplayMode = "Faces, Wireframe & Nodes"
+    obj.ViewObject.BackfaceCulling = False
+
+    # render object
+    doc.recompute()
 # }}}
 
 if __name__ == '__main__':
-    main()
+    form = Form()
 
