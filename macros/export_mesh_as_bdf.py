@@ -2,6 +2,28 @@
 import FreeCAD, Part, Fem
 from PySide import QtGui
 from copy import copy as copy
+import math
+
+class Form(QtGui.QDialog): # {{{
+    """ Pick output filename to save
+    """
+    def __init__(self): # {{{
+        super(Form, self).__init__()
+        self.setModal(True)
+        self.makeUI()
+        # }}}
+        
+    def makeUI(self): # {{{
+        filename, _ = QtGui.QFileDialog.getSaveFileName(
+            self,
+            'Save File As',
+            'Example_output.bdf',
+            "Nastran Bulk Data Files (*.bdf *.nas *.dat)"
+        )
+        main(filename)
+        self.close()
+    # }}}
+# }}}
 
 def get_N2E(E2N): # {{{
     """ Turns the E2N around, giving a dict of N2E
@@ -17,49 +39,256 @@ def get_N2E(E2N): # {{{
             N2E[NID].append(EID)
     return N2E
 # }}}
-def create_bulkdata_strings(nodes, E2N, E2T, E2P, P2M): #{{{
+
+def get_optimal_short_form_float(x): # {{{
+    """ Get optimal way to print the number in 8 characters
+    """
+    x_raw_string = "{:50.100f}".format(x)
+    # check for the easy answer
+    if x == 0.0:
+        x_str = " 0.0    "
+        return x_str
+
+    # get the order of magnitude of the point coordinates
+    order = math.ceil(math.log(abs(x),10))
+    if order == 0:
+        order_of_order = 0
+    elif order > 0:
+        order_of_order = math.ceil(math.log(abs(order+1),10))
+    elif order < 0:
+        order_of_order = math.ceil(math.log(abs(order-1),10))
+
+    # get optimal number of data characters allowed
+    if x > 0:
+        if order >= 7:
+            reduced_number = x/(10**(order-1))
+            reduced_number = round(reduced_number,6)
+            format_string = "{:1." + str(5 - order_of_order) + "f}"
+            reduced_number = format_string.format(reduced_number)
+            x_str = reduced_number + "+" + str(order)
+        elif order < -2:
+            reduced_number = x/(10**(order-1))
+            reduced_number = round(reduced_number,6)
+            format_string = "{:1." + str(5 - order_of_order) + "f}"
+            reduced_number = format_string.format(reduced_number)
+            x_str = reduced_number + str(order)
+        else: # this means just use the raw number
+            format_string = "{:"
+            format_string += str(max(order,0))
+            format_string += "."
+            format_string += str(7 - max(order,0))
+            format_string += "f}"
+            if order > 0:
+                x_str = format_string.format(x)
+            else:
+                x_str = format_string.format(x)[1:]
+    else:
+        if order >= 6:
+            reduced_number = x/(10**(order-1))
+            reduced_number = round(reduced_number,6)
+            format_string = "{:1." + str(4 - order_of_order) + "f}"
+            reduced_number = format_string.format(reduced_number)
+            x_str = reduced_number + "+" + str(order)
+        elif order < -2:
+            reduced_number = x/(10**(order-1))
+            reduced_number = round(reduced_number,6)
+            format_string = "{:1." + str(4 - order_of_order) + "f}"
+            reduced_number = format_string.format(reduced_number)
+            x_str = reduced_number + str(order)
+        else:
+            format_string = "{:"
+            format_string += str(max(order,0))
+            format_string += "."
+            format_string += str(6 - max(order,0))
+            format_string += "f}"
+            if order > 0:
+                x_str = format_string.format(x)
+            else:
+                x_str = format_string.format(x)[0] + format_string.format(x)[2:]
+    return x_str
+    # }}}
+
+def create_bulkdata_list(nodes, E2N, E2T, E2P, P2M, P2T, M2T): #{{{
     """ Create giant list, with each entry being a line 
+    - Assume short format 
     """
     bulkdata = []
     bulkdata.append("BEGIN BULK")
+    bulkdata.append("")
+
+    element_type_to_dimension = {1:1, 2:1, 3:1, 4:1, 5:1, 6:1, 7:3, 8:0,\
+    9:0, 10:0, 11:0, 12:0, 13:1, 14:3, 15:2, 16:2, 17:1, 18:2, 19:3, 20:2, 21:2}    
 
     # Properties
+    for PID in P2T.keys(): # {{{
+        if P2T[PID] == 0:
+            # figure out what kind of element PID is applied to
+            # get element IDs with current PID, and their types
+            EIDs_with_this_PID = []
+            element_types = []
+            for element in E2P:
+                if E2P[element] == PID:
+                    EIDs_with_this_PID.append(element)
+                    element_types.append(E2T[element])
+            type_IDs = list(set(element_types))
+            # if there's only one type, okay
+            if len(type_IDs) != 1:
+                # if there's more than one type, throw error.
+                # I don't want to deal with that right now.
+                s = "More than one element type not allowed at a time (yet)"
+                raise ValueError(s)
+            # get type dimension
+            dimension = element_type_to_dimension[type_IDs[0]]
+            if dimension == 0:
+                s = "Elements of dimension 0 not supported (yet)" 
+                raise ValueError(s)
+            elif dimension == 1:
+                s = "Elements of dimension 1 not supported (yet)" 
+                raise ValueError(s)
+            elif dimension == 2:
+                s = ""
+                s += "PSHELL  "
+                s += str(int(PID))
+                s += " " * (8 - len(str(int(PID))))
+                s += str(int(P2M[PID]))
+                s += " " * (8 - len(str(int(P2M[PID]))))
+                bulkdata.append(s)
+            elif dimension == 3:
+                s = ""
+                s += "PSOLID  "
+                s += str(int(PID))
+                s += " " * (8 - len(str(int(PID))))
+                s += str(int(P2M[PID]))
+                s += " " * (8 - len(str(int(P2M[PID]))))
+                bulkdata.append(s)
+        else:
+            s = "As of 2021.10.16, non default property types not supported"
+            raise ValueError(s)
+    # }}}
+    bulkdata.append("")
+
     # Materials
-    # Elements
+    for MID in M2T.keys(): # {{{
+        if M2T[MID] == 0:
+            # figure out what kind of property MID is applied to
+            properties_with_this_material = []
+            for PID in P2M.keys():
+                if MID == P2M[PID]:
+                    properties_with_this_material.append(PID)
+            # if number of properties with this material is greater than 1, no bueno
+            if len(properties_with_this_material) != 1:
+                s = "More than one property using a material not allowed at this time"
+                raise ValueError(s)
+            PID = properties_with_this_material[0]
+            # now need to get the elements with this property
+            EIDs_with_this_PID = []
+            element_types = []
+            for element in E2P:
+                if E2P[element] == PID:
+                    EIDs_with_this_PID.append(element)
+                    element_types.append(E2T[element])
+            type_IDs = list(set(element_types))
+            # if there's only one type, okay
+            if len(type_IDs) != 1:
+                # if there's more than one type, throw error.
+                # I don't want to deal with that right now.
+                s = "More than one element type not allowed at a time (yet)"
+                raise ValueError(s)
+            # get type dimension
+            dimension = element_type_to_dimension[type_IDs[0]]
+            if dimension == 0:
+                s = "Elements of dimension 0 not supported (yet)" 
+                raise ValueError(s)
+            elif dimension == 1:
+                s = "Elements of dimension 1 not supported (yet)" 
+                raise ValueError(s)
+            elif dimension == 2:
+                s = ""
+                s += "MAT1    "
+                s += str(int(MID))
+                s += " " * (8 - len(str(int(MID))))
+                bulkdata.append(s)
+            elif dimension == 3:
+                s = ""
+                s += "MAT1    "
+                s += str(int(MID))
+                s += " " * (8 - len(str(int(MID))))
+                bulkdata.append(s)
+        else:
+            s = "As of 2021.10.16, non default material types not supported"
+            raise ValueError(s)
+    # }}} 
+    bulkdata.append("")
+
+    # Elements (assuming short format for now)
+    for e in E2N: # {{{
+        e_type = E2T[e]
+        property_ID =  E2P[e]
+        N_nodes_in_elm = len(E2N[e])
+        if e_type == 7:   # CHEXA
+            if N_nodes_in_elm == 8:
+                s = "CHEXA   "
+                s += str(int(e)) + " " * (8 - len(str(int(e))))
+                s += str(int(E2P[e])) + " " * (8 - len(str(int(E2P[e]))))
+                s += str(int(E2N[e][0])) + " " * (8 - len(str(int(E2N[e][0]))))
+                s += str(int(E2N[e][1])) + " " * (8 - len(str(int(E2N[e][1]))))
+                s += str(int(E2N[e][2])) + " " * (8 - len(str(int(E2N[e][2]))))
+                s += str(int(E2N[e][3])) + " " * (8 - len(str(int(E2N[e][3]))))
+                s += str(int(E2N[e][4])) + " " * (8 - len(str(int(E2N[e][4]))))
+                s += str(int(E2N[e][5])) + " " * (8 - len(str(int(E2N[e][5]))))
+                bulkdata.append(s)
+                s = " " * 8
+                s += str(int(E2N[e][6])) + " " * (8 - len(str(int(E2N[e][6]))))
+                s += str(int(E2N[e][7])) + " " * (8 - len(str(int(E2N[e][7]))))
+                bulkdata.append(s)
+            else:
+                s = "As of 2021.10.16, only 8 noded CHEXA elements supported"
+                raise ValueError(s)
+        elif e_type == 15:
+            # should be impossible to get here without being a 4 noded QUAD. No checks needed
+            s = "CQUAD4  "
+            s += str(int(e)) + " " * (8 - len(str(int(e))))
+            s += str(int(E2P[e])) + " " * (8 - len(str(int(E2P[e]))))
+            s += str(int(E2N[e][0])) + " " * (8 - len(str(int(E2N[e][0]))))
+            s += str(int(E2N[e][1])) + " " * (8 - len(str(int(E2N[e][1]))))
+            s += str(int(E2N[e][2])) + " " * (8 - len(str(int(E2N[e][2]))))
+            s += str(int(E2N[e][3])) + " " * (8 - len(str(int(E2N[e][3]))))
+            bulkdata.append(s)
+        else:
+            s = "AS of 2021.10.16, only types 7 and 5 supported."
+            raise ValueError(s)
+    # }}}
+    bulkdata.append("")
+
     # Grids
-    
-    bulkdata.append(ENDDATA)
+    # pre-allocating node ID to order
+    # [log(x,10), log(y,10), log(z,10)]
+    for n in nodes.keys(): # {{{
+        s = "GRID    "
+        s += str(int(n)) + " " * (8 - len(str(int(n))))
+        s += " " * 8
+        # get the point coordinates
+        x = nodes[n][0]
+        y = nodes[n][1]
+        z = nodes[n][2]
+
+        # turn these into the most efficient short form numbers
+        x_str = get_optimal_short_form_float(x)
+        y_str = get_optimal_short_form_float(y)
+        z_str = get_optimal_short_form_float(z)
+
+        # append coords to the string
+        s += x_str
+        s += y_str
+        s += z_str
+
+        bulkdata.append(s) 
+     # }}}
+    bulkdata.append("ENDDATA")
     return bulkdata
     # }}}
-def main(): # {{{
-    """ GOAL: {{{
-    =========
-    Export many mesh FemMesh objects as a bdf file with correct numbering
-    - [X] Extract nodes per each FemMesh for many FemMeshes
-    - [X] Extract E2N per each FemMesh for many FemMeshes
-    - [X] Extract E2T per each FemMesh for many FemMeshes
-    - [X] Create E2P per each FemMesh for many FemMeshes
-          NOTE: Will create a property for each set of elements in each FemMesh
-    - [X] Create P2M per each FemMesh for many FemMeshes
-          NOTE: Will create a material for each set of elements in each FemMesh
-    - [X] Assemble core data structures together, correcting numbering
-    - [ ] Un-break Salomes nutty inside out elements
-    NOTE: Performance can be improved by sorting "data" from largest to smallest
-    }}}"""
-    mesh_objects = [] 
-    for obj in Gui.Selection.getSelectionEx():
-        if obj.TypeName == "Fem::FemMeshObject":
-            mesh_objects.append(obj.Object.FemMesh)
-        elif obj.TypeName == "Fem::FemMeshObjectPython":
-            mesh_objects.append(obj.Object.FemMesh)
 
-    # if there is nothing selected, raise an error
-    if len(mesh_objects) == 0:
-        raise ValueError("No mesh entities selected.")
-
-    # for each mesh object selected, assemble a master set of data
-    # 'data' will comprise the core data structures:[nodes, E2N, E2T, E2P, P2M]
-
+def get_data_from_mesh_objects(mesh_objects): # {{{
     # get 'data' from mesh objects
     data = []
     for i in range(len(mesh_objects)):
@@ -134,6 +363,39 @@ def main(): # {{{
         data[mesh_number]['E2T'] = copy(E2T)
         data[mesh_number]['E2P'] = copy(E2P)
         data[mesh_number]['P2M'] = copy(P2M)
+    return data
+# }}}
+
+def main(output_filename): # {{{
+    """ GOAL: {{{
+    =========
+    Export many mesh FemMesh objects as a bdf file with correct numbering
+    - [X] Extract nodes per each FemMesh for many FemMeshes
+    - [X] Extract E2N per each FemMesh for many FemMeshes
+    - [X] Extract E2T per each FemMesh for many FemMeshes
+    - [X] Create E2P per each FemMesh for many FemMeshes
+          NOTE: Will create a property for each set of elements in each FemMesh
+    - [X] Create P2M per each FemMesh for many FemMeshes
+          NOTE: Will create a material for each set of elements in each FemMesh
+    - [X] Assemble core data structures together, correcting numbering
+    - [ ] Un-break Salomes nutty inside out elements
+    NOTE: Performance can be improved by sorting "data" from largest to smallest
+    }}}"""
+    mesh_objects = [] 
+    for obj in Gui.Selection.getSelectionEx():
+        if obj.TypeName == "Fem::FemMeshObject":
+            mesh_objects.append(obj.Object.FemMesh)
+        elif obj.TypeName == "Fem::FemMeshObjectPython":
+            mesh_objects.append(obj.Object.FemMesh)
+
+    # if there is nothing selected, raise an error
+    if len(mesh_objects) == 0:
+        raise ValueError("No mesh entities selected.")
+
+    # for each mesh object selected, assemble a master set of data
+    # 'data' will comprise the core data structures:[nodes, E2N, E2T, E2P, P2M]
+    data = get_data_from_mesh_objects(mesh_objects)
+
 
     # Combine contents of data together into singular data structures
     nodes = {}  # Node ID to location
@@ -210,11 +472,21 @@ def main(): # {{{
             E2P[new_EID] = new_PID
             P2M[new_PID] = new_MID
 
+    # Now have nodes, E2N, E2T, E2P, and P2M, for a combined thingy
 
     # As a placeholder for later, two extra structures shall exist
-    # Those are the P2T and M2T, Property to type of property, and 
+    # Those are the P2T and M2T:
+        # Property to type of property
+        # Material to type of material
+    # default type value for P2T and M2T will be 0 and 0 
+    P2T = {}
+    for PID in P2M.keys():
+        P2T[PID] = 0
+        
+    M2T = {}
+    for MID in P2M.values():
+        M2T[MID] = 0
 
-    # Now have nodes, E2N, E2T, E2P, and P2M, for a combined thingy
     # Mystran default supported property cards include
         # 0D: PELAS, PBUSH
         # 1D: PBAR, PBARL, PROD
@@ -228,8 +500,12 @@ def main(): # {{{
         # for 3D Elements: PSOLID
     
     # Attempting to store bulkdata in giant string now
-    bulkdata_strings = create_bulkdata_strings(nodes, E2N, E2T, E2P, P2M)
+    bulkdata = create_bulkdata_list(nodes, E2N, E2T, E2P, P2M, P2T, M2T)
+
+    # write resutls out 
+    with open(output_filename, mode='wt', encoding='utf-8') as bdf:
+        bdf.write('\n'.join(bulkdata))
     #}}}
 
 if __name__ == '__main__':
-    main()
+    form = Form()
