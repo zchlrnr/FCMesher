@@ -245,7 +245,8 @@ def create_bulkdata_list(nodes, E2N, E2T, E2P, P2M, P2T, M2T): #{{{
                 s = "As of 2021.10.16, only 8 noded CHEXA elements supported"
                 raise ValueError(s)
         elif e_type == 15:
-            # should be impossible to get here without being a 4 noded QUAD. No checks needed
+            # should be impossible to get here without being a 4 noded QUAD.
+            # No checks needed
             s = "CQUAD4  "
             s += str(int(e)) + " " * (8 - len(str(int(e))))
             s += str(int(E2P[e])) + " " * (8 - len(str(int(E2P[e]))))
@@ -254,8 +255,29 @@ def create_bulkdata_list(nodes, E2N, E2T, E2P, P2M, P2T, M2T): #{{{
             s += str(int(E2N[e][2])) + " " * (8 - len(str(int(E2N[e][2]))))
             s += str(int(E2N[e][3])) + " " * (8 - len(str(int(E2N[e][3]))))
             bulkdata.append(s)
+        elif e_type == 19:
+            if N_nodes_in_elm == 10:
+                s = "CTETRA  "
+                s += str(int(e)) + " " * (8 - len(str(int(e))))
+                s += str(int(E2P[e])) + " " * (8 - len(str(int(E2P[e]))))
+                s += str(int(E2N[e][0])) + " " * (8 - len(str(int(E2N[e][0]))))
+                s += str(int(E2N[e][1])) + " " * (8 - len(str(int(E2N[e][1]))))
+                s += str(int(E2N[e][2])) + " " * (8 - len(str(int(E2N[e][2]))))
+                s += str(int(E2N[e][3])) + " " * (8 - len(str(int(E2N[e][3]))))
+                s += str(int(E2N[e][4])) + " " * (8 - len(str(int(E2N[e][4]))))
+                s += str(int(E2N[e][5])) + " " * (8 - len(str(int(E2N[e][5]))))
+                bulkdata.append(s)
+                s = " " * 8
+                s += str(int(E2N[e][6])) + " " * (8 - len(str(int(E2N[e][6]))))
+                s += str(int(E2N[e][7])) + " " * (8 - len(str(int(E2N[e][7]))))
+                s += str(int(E2N[e][8])) + " " * (8 - len(str(int(E2N[e][8]))))
+                s += str(int(E2N[e][9])) + " " * (8 - len(str(int(E2N[e][9]))))
+                bulkdata.append(s)
+            else:
+                s = "As of 2021.10.17, only 10 noded CTETRA elements supported"
+                raise ValueError(s)
         else:
-            s = "AS of 2021.10.16, only types 7 and 5 supported."
+            s = "AS of 2021.10.16, only types 7, 5, and 19 supported."
             raise ValueError(s)
     # }}}
     bulkdata.append("")
@@ -308,13 +330,13 @@ def get_data_from_mesh_objects(mesh_objects): # {{{
         # get E2N, E2T, E2P, and P2M for this mesh
         if mesh.EdgeCount != 0: # {{{
             s = "Edges not supported as of 2021.10.16"
-            raise ValueError(s)
+            print(s)
             # }}}
         if mesh.TriangleCount != 0: # {{{
             s = "Triangles not supported as of 2021.10.16"
-            raise ValueError(s)
+            print(s)
             #}}}
-        if mesh.QuadrangleCount !=-1: # Type 15 {{{
+        if mesh.QuadrangleCount != 0: # Type 15 {{{
             EID = max(E2N.keys(), default=0)        # Element ID
             PID = max(E2P.keys(), default=0) + 1    # Property ID
             MID = max(P2M.keys(), default=0) + 1    # Material ID
@@ -330,7 +352,7 @@ def get_data_from_mesh_objects(mesh_objects): # {{{
                     E2P[EID] = PID
                     P2M[PID] = MID
             # }}}
-        if mesh.HexaCount != 0:      # Type 7 {{{
+        if mesh.HexaCount != 0:       # Type 7 {{{
             EID = max(E2N.keys(), default=0)        # Element ID
             PID = max(E2P.keys(), default=0) + 1    # Property ID
             MID = max(P2M.keys(), default=0) + 1    # Material ID
@@ -345,10 +367,28 @@ def get_data_from_mesh_objects(mesh_objects): # {{{
                     E2T[EID] = 7
                     E2P[EID] = PID
                     P2M[PID] = MID
+                else:
+                    s = "As of 2021.10.17, CHEXA 20 elements are not supported."
+                    raise ValueError(s)
             # }}}
-        if mesh.TetraCount != 0: # {{{
-            s = "Tetras not supported as of 2021.10.16"
-            raise ValueError(s)
+        if mesh.TetraCount != 0:      # Type 19 {{{
+            EID = max(E2N.keys(), default=0)        # Element ID
+            PID = max(E2P.keys(), default=0) + 1    # Property ID
+            MID = max(P2M.keys(), default=0) + 1    # Material ID
+            for volume in mesh.Volumes:
+                # if it's 10 noded, it's a CTETRA element with 10 nodes
+                if len(mesh.getElementNodes(volume)) == 10:
+                    EID += 1
+                    # un-salome'ifying
+                    OG = list(mesh.getElementNodes(volume))
+                    E2N[EID] = [OG[3], OG[2], OG[0], OG[1], OG[9], OG[6],\
+                                OG[7], OG[8], OG[5], OG[4]]
+                    E2T[EID] = 19
+                    E2P[EID] = PID
+                    P2M[PID] = MID
+                else:
+                    s = "As of 2021.10.17, CTETRA 4 elements are not supported."
+                    raise ValueError(s)
             # }}}
         if mesh.PyramidCount != 0: # {{{
             s = "Pyramids not supported as of 2021.10.16"
