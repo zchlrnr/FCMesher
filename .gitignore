@@ -4,4 +4,4 @@ kdtree_test.py
 *bdf
 __pycache__
 Resources/
-testfile/
+testfile/*
