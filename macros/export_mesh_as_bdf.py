@@ -65,7 +65,7 @@ def get_optimal_short_form_float(x): # {{{
         order_of_order = math.ceil(math.log(abs(order-1),10))
 
     # get optimal number of data characters allowed
-    if x > 0:
+    if x > 0: # positive
         if order >= 7:
             reduced_number = x/(10**(order-1))
             reduced_number = round(reduced_number,6)
@@ -93,7 +93,7 @@ def get_optimal_short_form_float(x): # {{{
                 x_str = format_string.format(x)
             else:
                 x_str = format_string.format(x)[1:]
-    else:
+    else: # negative
         if order >= 6:
             reduced_number = x/(10**(order-1))
             reduced_number = round(reduced_number,6)
@@ -110,7 +110,8 @@ def get_optimal_short_form_float(x): # {{{
             format_string = "{:"
             format_string += str(max(order,0))
             format_string += "."
-            if math.log(x,10).is_integer():
+            # check if is a power of 10
+            if math.log(abs(x),10).is_integer():
                 format_string += str(5 - max(order,0))
             else:
                 format_string += str(6 - max(order,0))
@@ -331,6 +332,10 @@ def create_bulkdata_list(nodes, E2N, E2T, E2P, P2M, P2T, M2T): #{{{
     # }}}
 
 def get_data_from_mesh_objects(mesh_objects): # {{{
+    """
+    Bug observed on 2021.10.24:
+        If mesh does not have compactly numbered nodes, this crushes its numbering
+    """
     # get 'data' from mesh objects
     data = []
     for i in range(len(mesh_objects)):
@@ -343,9 +348,12 @@ def get_data_from_mesh_objects(mesh_objects): # {{{
         E2P = {}    # Element to Property ID
         P2M = {}    # Property to Material ID
         # get nodes for this mesh 
-        NID = max(nodes.keys(), default=0) # Node ID
+        #NID = max(nodes.keys(), default=0) # Node ID
+        # not sure why I was doing that.^^
+        # that results in the 2021.10.24 bug.
         for node in mesh.Nodes:
-            NID += 1
+            #NID += 1
+            NID = node
             nodes[NID] = list(mesh.getNodeById(node))
         # get E2N, E2T, E2P, and P2M for this mesh
         if mesh.EdgeCount != 0: # {{{
@@ -455,7 +463,6 @@ def main(output_filename): # {{{
     # for each mesh object selected, assemble a master set of data
     # 'data' will comprise the core data structures:[nodes, E2N, E2T, E2P, P2M]
     data = get_data_from_mesh_objects(mesh_objects)
-
 
     # Combine contents of data together into singular data structures
     nodes = {}  # Node ID to location
