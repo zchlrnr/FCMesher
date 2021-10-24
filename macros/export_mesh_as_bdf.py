@@ -44,9 +44,15 @@ def get_optimal_short_form_float(x): # {{{
     """ Get optimal way to print the number in 8 characters
     """
     x_raw_string = "{:50.100f}".format(x)
-    # check for the easy answer
-    if x == 0.0:
+    # check for zero
+    if x == 0.0: 
         x_str = " 0.0    "
+        return x_str
+
+    # check for power of 10
+    if math.log(abs(round(x,7)),10).is_integer(): 
+        x_str = "1." + "+" + str(int(math.log(round(x,7),10)))
+        x_str += " " * (8 - len(x_str))
         return x_str
 
     # get the order of magnitude of the point coordinates
@@ -73,10 +79,15 @@ def get_optimal_short_form_float(x): # {{{
             reduced_number = format_string.format(reduced_number)
             x_str = reduced_number + str(order)
         else: # this means just use the raw number
+            x = round(x,7)
             format_string = "{:"
+            lower_order = math.floor(math.log(abs(x),10))
             format_string += str(max(order,0))
             format_string += "."
-            format_string += str(7 - max(order,0))
+            if order == lower_order:
+                format_string += str(6 - max(order,0))
+            else:
+                format_string += str(7 - max(order,0))
             format_string += "f}"
             if order > 0:
                 x_str = format_string.format(x)
@@ -99,12 +110,23 @@ def get_optimal_short_form_float(x): # {{{
             format_string = "{:"
             format_string += str(max(order,0))
             format_string += "."
-            format_string += str(6 - max(order,0))
+            if math.log(x,10).is_integer():
+                format_string += str(5 - max(order,0))
+            else:
+                format_string += str(6 - max(order,0))
             format_string += "f}"
             if order > 0:
                 x_str = format_string.format(x)
             else:
                 x_str = format_string.format(x)[0] + format_string.format(x)[2:]
+
+    # check that x_str is the right length
+    if len(x_str) != 8:
+        print(x_str)
+        print(x)
+        print(math.log(x,10))
+        raise ValueError("printed value string is wrong length!")
+
     return x_str
     # }}}
 
@@ -283,8 +305,6 @@ def create_bulkdata_list(nodes, E2N, E2T, E2P, P2M, P2T, M2T): #{{{
     bulkdata.append("")
 
     # Grids
-    # pre-allocating node ID to order
-    # [log(x,10), log(y,10), log(z,10)]
     for n in nodes.keys(): # {{{
         s = "GRID    "
         s += str(int(n)) + " " * (8 - len(str(int(n))))
