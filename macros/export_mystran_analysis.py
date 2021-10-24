@@ -470,6 +470,8 @@ def is_valid_MAT1_card(material_label): # {{{
 
 def main():
     """ Click on an Analysis in FreeCAD, save out everything in it to make a run.
+    * as of 2021.10.24, shelved. Author is too stupid to think of ways to chunk 
+    the state permutations into finite cases, at time of writing.
     """
     selected_objects = [] 
     for obj in Gui.Selection.getSelectionEx():
