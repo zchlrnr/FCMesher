@@ -114,7 +114,7 @@ def main(N_elms_X, N_elms_Y): # {{{
     obj.FemMesh = a
     obj.Placement.Base = FreeCAD.Vector(0, 0, 0)
     obj.ViewObject.DisplayMode = "Faces, Wireframe & Nodes"
-    obj.ViewObject.BackfaceCulling = False
+    obj.ViewObject.BackfaceCulling = True
     
     doc.recompute()
 # }}}
