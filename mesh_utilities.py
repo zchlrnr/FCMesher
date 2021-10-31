@@ -16,7 +16,7 @@ def solid_mesh_by_thickened_shell_mesh(*args): # {{{
                        (wasn't compliant with MSC Nastran. No biggie.)
     - [X] 2021.08.14 | Refactor hard coded shell mesh to reside in a function
     - [X] 2021.08.14 | Write out mesh bdf from E2N, nodes, and E2T
-    - [X] 2021.08.15 | Be able to recieve a mesh instead of making one
+    - [X] 2021.08.15 | Be able to receive a mesh instead of making one
     - [X] 2021.08.15 | Improve performance of get_N2NormVec
     - [ ] XXXX.XX.XX | Calibrate to return False if failed. True if works.
     - [ ] XXXX.XX.XX | Make ID offsetting routine that reads arguments in
@@ -206,7 +206,7 @@ def write_gridpoint_data_to_file(filename, nodes_offset): # {{{
         if z_string.startswith("-"):
             L_z += -1
 
-        # shorten the number of sigfigs we can have to accomodate the "-"
+        # shorten the number of sigfigs we can have to accommodate the "-"
         x_string = "{x:.{L}e}".format(x=x, L=L_x)
         y_string = "{y:.{L}e}".format(y=y, L=L_y)
         z_string = "{z:.{L}e}".format(z=z, L=L_z)
@@ -474,16 +474,16 @@ def get_points_on_3_point_quadratic_fit(N_elms, points): # {{{
     """
     nodes = []
     coefs_1 = get_quadratic_coefs(points)
-    # unpacking x coord coeficients 
+    # unpacking x coord coefficients 
     ax = coefs_1[0][0]
     bx = coefs_1[0][1]
     cx = coefs_1[0][2]
-    # unpacking y coord coeficients 
+    # unpacking y coord coefficients 
     ax = coefs_1[0][0]
     ay = coefs_1[1][0]
     by = coefs_1[1][1]
     cy = coefs_1[1][2]
-    # unpacking y coord coeficients 
+    # unpacking y coord coefficients 
     az = coefs_1[2][0]
     bz = coefs_1[2][1]
     cz = coefs_1[2][2]
@@ -498,7 +498,7 @@ def get_points_on_3_point_quadratic_fit(N_elms, points): # {{{
 # }}}
 
 def get_quadratic_coefs(list_input): # {{{
-    """ Get the coeficients for a best fit quadratic
+    """ Get the coefficients for a best fit quadratic
     """
     coefs_out = []
 

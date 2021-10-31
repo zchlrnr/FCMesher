@@ -46,7 +46,7 @@ class FCMesher(Gui.Workbench):
 
     icon_path = App.getUserAppDataDir() + 'Mod/FCMesher/Resources/'
     MenuText = 'FCMesher'
-    ToolTip = 'Tools to create meshes from enteties.'
+    ToolTip = 'Tools to create meshes from entities.'
     Icon = icon_path + 'applications-education.svg'
 
     def Initialize(self):
