@@ -50,7 +50,12 @@ def get_optimal_short_form_float(x): # {{{
         return x_str
 
     # check for power of 10
-    if math.log(abs(round(x,7)),10).is_integer(): 
+    print(x)
+    print(round(x,7))
+    if round(x,7) == 0:
+        x_str = " 0.0    "
+        return x_str
+    elif math.log(abs(round(x,7)),10).is_integer(): 
         x_str = "1." + "+" + str(int(math.log(round(x,7),10)))
         x_str += " " * (8 - len(x_str))
         return x_str
