@@ -204,6 +204,9 @@ def get_E2NormVec(nodes, E2N): #{{{
     return E2NormVec
     #}}}
 def get_N2NormVec(E2NormVec, E2N, nodes): # {{{
+    """
+    Bug: 2021.10.24: mag can be zero if normals aren't consistent
+    """
     N2NormVec = {}
     N2E = get_N2E(E2N)
     
@@ -217,6 +220,9 @@ def get_N2NormVec(E2NormVec, E2N, nodes): # {{{
             Y_comp += E2NormVec[EID][1]
             Z_comp += E2NormVec[EID][2]
         mag = ((X_comp**2) + (Y_comp**2) + (Z_comp**2))**0.5
+        if mag == 0:
+            s = "zero magnitude normal vector. Normals misaligned."
+            raise ValueError(s)
         X = X_comp/mag
         Y = Y_comp/mag
         Z = Z_comp/mag
