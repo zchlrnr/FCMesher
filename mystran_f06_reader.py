@@ -234,9 +234,17 @@ def mystran_f06_reader(*args):
             else:
                 s = "As of 2021.11.02, corner stress reading not written yet."
                 raise ValueError(s)
-            for i in stress_data:
-                print(i)
     #}}}
+
+    if gpforce_out:
+        # get line with first G R I D   P O I N T   F O R C E   B A L A N C E 
+        gp_re_str = '^.*G R I D   P O I N T   F O R C E   B A L A N C E.*$'
+        gpforce_start_index = 0
+        for count, line in enumerate(f06):
+            if re.match(gp_re_str, line):
+                #disp_start_index = count
+                print(line)
+        
         
 def main():
     testbed_location = "/home/vonbraun/Programs/mystran/FCMesher_F06_testbed"
@@ -246,10 +254,10 @@ def main():
     mystran_f06_reader(tet_filename_center)
     tria_filename_center = testbed_location +\
     "/CTRIA3/centered_stresses/CTRIA3_centered_stress.F06"
-    #mystran_f06_reader(tria_filename_center)
+    mystran_f06_reader(tria_filename_center)
     quad_filename_center= testbed_location +\
     "/CQUAD4/centered_stresses/all_together_center_stresses.F06"
-    #mystran_f06_reader(quad_filename_center)
+    mystran_f06_reader(quad_filename_center)
 
     # get it able to read corners (only really does anything for QUAD4 elements
     # (thank GOD)
