@@ -1,12 +1,8 @@
 ## FCMesher
 
-A toolset for orphan mesh creation and manipulation in FreeCAD.
-
-## Main functions
-
-* [Shell mesh loft between two curves](#shell_mesh_loft_between_two_curve) 
-* [Solid mesh by thickened shell mesh](#solid_mesh_by_thickened_shell_mesh)
-
+A toolset for orphan mesh creation and manipulation in FreeCAD, with the
+secondary goal of creating include file generation procedures for
+mystran/nastran.
 
 ### Shell mesh loft between two curves
 
