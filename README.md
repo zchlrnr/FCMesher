@@ -23,6 +23,11 @@ opinion.
     - SPC: "NAME: SPC1_SID_C"
     - Force: "NAME: FORCE_SID_Scale_Vx_Vy_Vz"
 
+#### proto_mesh_equivalencer.py
+* Collapses two FemMeshObjects together into a single one by replacing nodes
+  within a small tolerance with the nearest one in the other body, and globally
+  renumbering the nodes and elements.
+
 ### Shell mesh loft between two curves
 
 * Inputs:
