@@ -200,8 +200,9 @@ def main(): #{{{
         # write out file
         #}}}
     elif "FORCE" in nodeset_name:
+        # {{{
         # The correct format for the name is 
-        # Name: SPC1_SID_C
+        # Name: FORCE_SID_Scale_Vx_Vy_Vz"
         FORCE_index = nodeset_name.find("FORCE")
         trimmed_string = nodeset_name[FORCE_index:]
         split_name = trimmed_string.split("_")
@@ -214,11 +215,11 @@ def main(): #{{{
         if not is_valid_nastran_real(split_name[2]):
             raise ValueError("Force Scaling Factor is not a valid nastran real")
         if not is_valid_nastran_real(split_name[3]):
-            raise ValueError("Force COmponent in X is not a valid nastran real")
+            raise ValueError("Force Component in X is not a valid nastran real")
         if not is_valid_nastran_real(split_name[4]):
-            raise ValueError("Force COmponent in Y is not a valid nastran real")
+            raise ValueError("Force Component in Y is not a valid nastran real")
         if not is_valid_nastran_real(split_name[5]):
-            raise ValueError("Force COmponent in Z is not a valid nastran real")
+            raise ValueError("Force Component in Z is not a valid nastran real")
         # if we're here, we should be all good
         SID = split_name[1]
         scale = split_name[2]
@@ -237,6 +238,7 @@ def main(): #{{{
             file_name = "constraint_file.bdf"
         form = Form(file_name, FORCE_include)
         form.makeUI()
+        # }}}
     else:
         s = "Only SPC1 and FORCE cards supported as of 2021.10.14"
         raise ValueError(s)
