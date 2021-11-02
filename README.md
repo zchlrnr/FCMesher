@@ -27,6 +27,13 @@ opinion.
 * Collapses two FemMeshObjects together into a single one by replacing nodes
   within a small tolerance with the nearest one in the other body, and globally
   renumbering the nodes and elements.
+* Goal is to replace this with something that can maintain the original meshes
+  and only renumber the nodes to be common, such that a secondary pass of
+  removing duplicate GRID lines in the bdf will be able to effectively crush the
+  two together. Work on that is stalled until I can figure out who in their
+  right mind would EVER think that wanton disregard for IDs, and arbitrary
+  renumbering of nodes and elements was a good idea; and then how I can stop
+  their terrible ideas from destroying my meshes. 
 
 ### Shell mesh loft between two curves
 
