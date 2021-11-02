@@ -148,7 +148,7 @@ def main(): #{{{
     """ 
     * User clicks on nodeset
     * detects syntax from name of nodeset
-    * opens file save dialog to save inclue with a name to a location
+    * opens file save dialog to save include with a name to a location
     """
     nodeset_objects = [] 
     for obj in Gui.Selection.getSelectionEx():
