@@ -2,6 +2,7 @@ import os
 import re
 import pathlib
 from copy import copy as copy
+import sys
 def mystran_f06_reader(*args):
     """
     It is the goal of this subroutine to read in a f06 file, and return all 
@@ -247,7 +248,8 @@ def mystran_f06_reader(*args):
         
         
 def main():
-    testbed_location = "/home/vonbraun/Programs/mystran/FCMesher_F06_testbed"
+    testbed_location = sys.argv[1]
+
     # get it able to read centers first
     tet_filename_center = testbed_location +\
     "/TETRA/center_stress/Example_output.F06"
