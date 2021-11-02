@@ -4,6 +4,25 @@ A toolset for orphan mesh creation and manipulation in FreeCAD, with the
 secondary goal of creating include file generation procedures for
 mystran/nastran.
 
+Assistance in making gui elements would be very greatly appreciated.
+
+Macros should be listed in order of descending usefulness in this authors
+opinion.
+
+### Macros
+
+#### export_mesh_as_bdf.py
+* Exports selcted FemMeshObject(s) and/or FemMeshObjectPython(s) to a nastran bulk
+  data file. The only way to actually export multiple parts in a single
+  analysis, to this authors knowledge.
+
+#### export_nodeset.py
+* Exports selected nodesets and uses the nodeset labels to create
+  appropriate include files for single point constraints and forces.
+* The two formats for labels current supported are
+    - SPC: "NAME: SPC1_SID_C"
+    - Force: "NAME: FORCE_SID_Scale_Vx_Vy_Vz"
+
 ### Shell mesh loft between two curves
 
 * Inputs:
