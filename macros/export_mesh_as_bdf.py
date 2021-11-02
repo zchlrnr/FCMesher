@@ -50,8 +50,6 @@ def get_optimal_short_form_float(x): # {{{
         return x_str
 
     # check for power of 10
-    print(x)
-    print(round(x,7))
     if round(x,7) == 0:
         x_str = " 0.0    "
         return x_str
@@ -132,7 +130,6 @@ def get_optimal_short_form_float(x): # {{{
         print(x)
         print(math.log(x,10))
         raise ValueError("printed value string is wrong length!")
-
     return x_str
     # }}}
 
@@ -272,7 +269,7 @@ def create_bulkdata_list(nodes, E2N, E2T, E2P, P2M, P2T, M2T): #{{{
             else:
                 s = "As of 2021.10.16, only 8 noded CHEXA elements supported"
                 raise ValueError(s)
-        elif e_type == 15:
+        elif e_type == 15:  #CQUAD4
             # should be impossible to get here without being a 4 noded QUAD.
             # No checks needed
             s = "CQUAD4  "
@@ -283,7 +280,7 @@ def create_bulkdata_list(nodes, E2N, E2T, E2P, P2M, P2T, M2T): #{{{
             s += str(int(E2N[e][2])) + " " * (8 - len(str(int(E2N[e][2]))))
             s += str(int(E2N[e][3])) + " " * (8 - len(str(int(E2N[e][3]))))
             bulkdata.append(s)
-        elif e_type == 19:
+        elif e_type == 19:  #CTETRA
             if N_nodes_in_elm == 10:
                 s = "CTETRA  "
                 s += str(int(e)) + " " * (8 - len(str(int(e))))
@@ -303,6 +300,18 @@ def create_bulkdata_list(nodes, E2N, E2T, E2P, P2M, P2T, M2T): #{{{
                 bulkdata.append(s)
             else:
                 s = "As of 2021.10.17, only 10 noded CTETRA elements supported"
+                raise ValueError(s)
+        elif e_type == 20:  #CTRIA3
+            if N_nodes_in_elm == 3:
+                s = "CTRIA3  "
+                s += str(int(e)) + " " * (8 - len(str(int(e))))
+                s += str(int(E2P[e])) + " " * (8 - len(str(int(E2P[e]))))
+                s += str(int(E2N[e][0])) + " " * (8 - len(str(int(E2N[e][0]))))
+                s += str(int(E2N[e][1])) + " " * (8 - len(str(int(E2N[e][1]))))
+                s += str(int(E2N[e][2])) + " " * (8 - len(str(int(E2N[e][2]))))
+                bulkdata.append(s)
+            else:
+                s = "As of 2021.10.31, only 3 noded CTRIA3 elements supported"
                 raise ValueError(s)
         else:
             s = "AS of 2021.10.16, only types 7, 5, and 19 supported."
@@ -365,9 +374,20 @@ def get_data_from_mesh_objects(mesh_objects): # {{{
             s = "Edges not supported as of 2021.10.16"
             print(s)
             # }}}
-        if mesh.TriangleCount != 0: # {{{
-            s = "Triangles not supported as of 2021.10.16"
-            print(s)
+        if mesh.TriangleCount != 0: # Type 20 {{{
+            EID = max(E2N.keys(), default=0)        # Element ID
+            PID = max(E2P.keys(), default=0) + 1    # Property ID
+            MID = max(P2M.keys(), default=0) + 1    # Material ID
+            for face in mesh.Faces:
+                # if it's 3 noded, it's a TRIA3 element
+                if len(mesh.getElementNodes(face)) == 3:
+                    EID += 1
+                    OG = list(mesh.getElementNodes(face))    # original order
+                    E2N[EID] = [OG[0], OG[1], OG[2]]  # correct order?
+                    E2N[EID] = list(mesh.getElementNodes(face))
+                    E2T[EID] = 20
+                    E2P[EID] = PID
+                    P2M[PID] = MID
             #}}}
         if mesh.QuadrangleCount != 0: # Type 15 {{{
             EID = max(E2N.keys(), default=0)        # Element ID
