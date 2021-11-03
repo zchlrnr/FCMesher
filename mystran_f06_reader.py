@@ -237,15 +237,57 @@ def mystran_f06_reader(*args):
                 raise ValueError(s)
     #}}}
 
-    if gpforce_out:
+    if gpforce_out: # {{{
         # get line with first G R I D   P O I N T   F O R C E   B A L A N C E 
         gp_re_str = '^.*G R I D   P O I N T   F O R C E   B A L A N C E.*$'
         gpforce_start_index = 0
         for count, line in enumerate(f06):
             if re.match(gp_re_str, line):
-                #disp_start_index = count
-                print(line)
-        
+                gpforce_start_index = count
+        # get all of the strings 
+        gpforce_data = []
+        for count, line in enumerate(f06[gpforce_start_index:]):
+            # check if the line starts with "FORCE BALANCE FOR"
+            s = r"^.*FORCE BALANCE FOR GRID POINT.*$"
+            if re.match(s, line) is not None:
+                data_line = re.sub('\s+', ',', line)
+                data_line = re.sub('^,', '', data_line)
+                data_line = re.sub(',$', '', data_line)
+                data = data_line.split(",")
+                NID = int(data[5])
+                CoordID = int(data[len(data)-1])
+                # gpforce_data will be of the form
+                # NID, EID, T1, T2, T3, R1, R2, R3, CoordID
+                gpforce_strings = []
+                done_yet = False
+                i = 3
+                while not done_yet:
+                    i += 1
+                    newline = f06[gpforce_start_index+count+i]
+                    newline = re.sub('^\s+', '', newline)
+                    if "-----"in newline:
+                        done_yet = True
+                        continue
+                    gpforce_strings.append(newline)
+                # have all the gpforce strings for this node ID
+                for entry in gpforce_strings:
+                    if "ELEM" in entry:
+                        elem_line = re.sub('\s+',',', entry)
+                        elem_line = re.sub(',$','', elem_line)
+                        elem_data = elem_line.split(',')
+                        EID = int(elem_data[2])
+                        T1 = float(elem_data[3])
+                        T2 = float(elem_data[4])
+                        T3 = float(elem_data[5])
+                        R1 = float(elem_data[6])
+                        R2 = float(elem_data[7])
+                        R3 = float(elem_data[8])
+                        dat_entry = [NID, EID, T1, T2, T3, R1, R2, R3, CoordID]
+                        gpforce_data.append(dat_entry)
+        for i in gpforce_data:
+            print(i)
+    #}}}
+
         
 def main():
     testbed_location = sys.argv[1]
@@ -256,10 +298,11 @@ def main():
     mystran_f06_reader(tet_filename_center)
     tria_filename_center = testbed_location +\
     "/CTRIA3/centered_stresses/CTRIA3_centered_stress.F06"
-    mystran_f06_reader(tria_filename_center)
+    #mystran_f06_reader(tria_filename_center)
     quad_filename_center= testbed_location +\
     "/CQUAD4/centered_stresses/all_together_center_stresses.F06"
-    mystran_f06_reader(quad_filename_center)
+    #mystran_f06_reader(quad_filename_center)
+    return
 
     # get it able to read corners (only really does anything for QUAD4 elements
     # (thank GOD)
