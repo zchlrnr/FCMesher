@@ -284,24 +284,35 @@ def mystran_f06_reader(*args):
                         R3 = float(elem_data[8])
                         dat_entry = [NID, EID, T1, T2, T3, R1, R2, R3, CoordID]
                         gpforce_data.append(dat_entry)
-        for i in gpforce_data:
-            print(i)
     #}}}
+
+    # combine results to return into a dict to send back
+    results = {}
+    if displacement_out:
+        results_to_return['displacement'] = displacement_data
+    if stress_out:
+        results_to_return['stress'] = stress_data
+    if gpforce_out:
+        results_to_return['gpforce'] = gpforce_data
+
+    return results
 
         
 def main():
+    # for development purposes, read anchor to testbed location from cli in
     testbed_location = sys.argv[1]
 
+    """ Development Chunks
     # get it able to read centers first
     tet_filename_center = testbed_location +\
     "/TETRA/center_stress/Example_output.F06"
-    mystran_f06_reader(tet_filename_center)
+    #mystran_f06_reader(tet_filename_center)
     tria_filename_center = testbed_location +\
     "/CTRIA3/centered_stresses/CTRIA3_centered_stress.F06"
     #mystran_f06_reader(tria_filename_center)
     quad_filename_center= testbed_location +\
     "/CQUAD4/centered_stresses/all_together_center_stresses.F06"
-    #mystran_f06_reader(quad_filename_center)
+    mystran_f06_reader(quad_filename_center)
     return
 
     # get it able to read corners (only really does anything for QUAD4 elements
@@ -315,6 +326,7 @@ def main():
     quad_filename_center= testbed_location +\
     "/CQUAD4/corner_stresses/all_together_corner_stress.F06"
     #mystran_f06_reader(quad_filename_center)
+    """
 
 if __name__ == "__main__":
     main()
