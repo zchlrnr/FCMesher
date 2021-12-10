@@ -149,6 +149,10 @@ def main(): #{{{
     * User clicks on nodeset
     * detects syntax from name of nodeset
     * opens file save dialog to save include with a name to a location
+    - [X] Support SPC1 cards
+    - [X] Support FORCE cards
+    - [ ] Support TEMP cards
+    - [ ] Support TEMPP1 cards
     """
     nodeset_objects = [] 
     for obj in Gui.Selection.getSelectionEx():
@@ -163,8 +167,7 @@ def main(): #{{{
     nodeset_nodes = nodeset_objects.Nodes
 
     # see what kind of thing the nodeset wants to be
-    if "SPC1" in nodeset_name:
-        #{{{
+    if "SPC1" in nodeset_name: # {{{
         # The correct format for the name is 
         # Name: SPC1_SID_C
         SPC1_index = nodeset_name.find("SPC1")
@@ -199,8 +202,7 @@ def main(): #{{{
 
         # write out file
         #}}}
-    elif "FORCE" in nodeset_name:
-        # {{{
+    elif "FORCE" in nodeset_name: # {{{
         # The correct format for the name is 
         # Name: FORCE_SID_Scale_Vx_Vy_Vz"
         FORCE_index = nodeset_name.find("FORCE")
@@ -238,6 +240,11 @@ def main(): #{{{
             file_name = "constraint_file.bdf"
         form = Form(file_name, FORCE_include)
         form.makeUI()
+        # }}}
+    elif "TEMP" in nodeset_name: # {{{
+        # The correct format for the name is 
+        # Name: TEMP_SID_Scale_Vx_Vy_Vz"
+        pass
         # }}}
     else:
         s = "Only SPC1 and FORCE cards supported as of 2021.10.14"
