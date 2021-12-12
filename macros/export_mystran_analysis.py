@@ -6,8 +6,7 @@ import math
 import re
 
 def get_N2E(E2N): # {{{
-    """ Turns the E2N around, giving a dict of N2E
-    """
+    """Turns the E2N around, giving a dict of N2E"""
     N2E = {}
     for EID, Element in E2N.items():
         # go through nodes in every element
@@ -21,16 +20,15 @@ def get_N2E(E2N): # {{{
 # }}}
 
 def get_optimal_short_form_float(x): # {{{
-    """ Get optimal way to print the number in 8 characters
-    """
-    x_raw_string = "{:50.100f}".format(x)
+    """Get optimal way to print the number in 8 characters"""
+    #x_raw_string = "{:50.100f}".format(x)
     # check for zero
-    if x == 0.0: 
+    if x == 0.0:
         x_str = " 0.0    "
         return x_str
 
     # check for power of 10
-    if math.log(abs(round(x,7)),10).is_integer(): 
+    if math.log(abs(round(x,7)),10).is_integer():
         x_str = "1." + "+" + str(int(math.log(round(x,7),10)))
         x_str += " " * (8 - len(x_str))
         return x_str
@@ -106,23 +104,22 @@ def get_optimal_short_form_float(x): # {{{
         print(x)
         print(math.log(x,10))
         raise ValueError("printed value string is wrong length!")
-
     return x_str
     # }}}
 
 def create_bulkdata_list(nodes, E2N, E2T, E2P, P2M, P2T, M2T): #{{{
-    """ Create giant list, with each entry being a line 
-    - Assume short format 
+    """ Create giant list, with each entry being a line
+    - Assume short format
     """
     bulkdata = []
     bulkdata.append("BEGIN BULK")
     bulkdata.append("")
 
     element_type_to_dimension = {1:1, 2:1, 3:1, 4:1, 5:1, 6:1, 7:3, 8:0,\
-    9:0, 10:0, 11:0, 12:0, 13:1, 14:3, 15:2, 16:2, 17:1, 18:2, 19:3, 20:2, 21:2}    
+    9:0, 10:0, 11:0, 12:0, 13:1, 14:3, 15:2, 16:2, 17:1, 18:2, 19:3, 20:2, 21:2}
 
     # Properties
-    for PID in P2T.keys(): # {{{
+    for PID in P2T: # {{{
         if P2T[PID] == 0:
             # figure out what kind of element PID is applied to
             # get element IDs with current PID, and their types
@@ -142,10 +139,10 @@ def create_bulkdata_list(nodes, E2N, E2T, E2P, P2M, P2T, M2T): #{{{
             # get type dimension
             dimension = element_type_to_dimension[type_IDs[0]]
             if dimension == 0:
-                s = "Elements of dimension 0 not supported (yet)" 
+                s = "Elements of dimension 0 not supported (yet)"
                 raise ValueError(s)
             elif dimension == 1:
-                s = "Elements of dimension 1 not supported (yet)" 
+                s = "Elements of dimension 1 not supported (yet)"
                 raise ValueError(s)
             elif dimension == 2:
                 s = ""
@@ -170,11 +167,11 @@ def create_bulkdata_list(nodes, E2N, E2T, E2P, P2M, P2T, M2T): #{{{
     bulkdata.append("")
 
     # Materials
-    for MID in M2T.keys(): # {{{
+    for MID in M2T: # {{{
         if M2T[MID] == 0:
             # figure out what kind of property MID is applied to
             properties_with_this_material = []
-            for PID in P2M.keys():
+            for PID in P2M:
                 if MID == P2M[PID]:
                     properties_with_this_material.append(PID)
             # if number of properties with this material is greater than 1, no bueno
@@ -199,10 +196,10 @@ def create_bulkdata_list(nodes, E2N, E2T, E2P, P2M, P2T, M2T): #{{{
             # get type dimension
             dimension = element_type_to_dimension[type_IDs[0]]
             if dimension == 0:
-                s = "Elements of dimension 0 not supported (yet)" 
+                s = "Elements of dimension 0 not supported (yet)"
                 raise ValueError(s)
             elif dimension == 1:
-                s = "Elements of dimension 1 not supported (yet)" 
+                s = "Elements of dimension 1 not supported (yet)"
                 raise ValueError(s)
             elif dimension == 2:
                 s = ""
@@ -219,7 +216,7 @@ def create_bulkdata_list(nodes, E2N, E2T, E2P, P2M, P2T, M2T): #{{{
         else:
             s = "As of 2021.10.16, non default material types not supported"
             raise ValueError(s)
-    # }}} 
+    # }}}
     bulkdata.append("")
 
     # Elements (assuming short format for now)
@@ -285,7 +282,7 @@ def create_bulkdata_list(nodes, E2N, E2T, E2P, P2M, P2T, M2T): #{{{
     bulkdata.append("")
 
     # Grids
-    for n in nodes.keys(): # {{{
+    for n in nodes: # {{{
         s = "GRID    "
         s += str(int(n)) + " " * (8 - len(str(int(n))))
         s += " " * 8
@@ -304,7 +301,7 @@ def create_bulkdata_list(nodes, E2N, E2T, E2P, P2M, P2T, M2T): #{{{
         s += y_str
         s += z_str
 
-        bulkdata.append(s) 
+        bulkdata.append(s)
      # }}}
 
     return bulkdata
@@ -313,16 +310,16 @@ def create_bulkdata_list(nodes, E2N, E2T, E2P, P2M, P2T, M2T): #{{{
 def get_data_from_mesh_objects(mesh_objects): # {{{
     # get 'data' from mesh objects
     data = []
-    for i in range(len(mesh_objects)):
+    for _i in range(len(mesh_objects)):
         data.append({})
-    for mesh_number, mesh in enumerate(mesh_objects): 
+    for mesh_number, mesh in enumerate(mesh_objects):
         # preallocate popualted data structures
         nodes = {}  # Node ID to location
         E2N = {}    # Element to Node ID
         E2T = {}    # Element to Type ID
         E2P = {}    # Element to Property ID
         P2M = {}    # Property to Material ID
-        # get nodes for this mesh 
+        # get nodes for this mesh
         NID = max(nodes.keys(), default=0) # Node ID
         for node in mesh.Nodes:
             NID += 1
@@ -422,7 +419,7 @@ def is_valid_MAT1_card(material_label): # {{{
     # does the first field contain MAT1?
     if "MAT1" not in split_material_label[0]:
         raise ValueError("material label does not have MAT1 in field before _")
-    
+
     # will allow the user to have a name before the MAT1 card
     split_material_label = ["MAT1", *split_material_label[1:]]
 
@@ -469,11 +466,12 @@ def is_valid_MAT1_card(material_label): # {{{
 # }}}
 
 def main():
-    """ Click on an Analysis in FreeCAD, save out everything in it to make a run.
-    * as of 2021.10.24, shelved. Author is too stupid to think of ways to chunk 
+    """
+    Click on an Analysis in FreeCAD, save out everything in it to make a run.
+    * as of 2021.10.24, shelved. Author is too stupid to think of ways to chunk
     the state permutations into finite cases, at time of writing.
     """
-    selected_objects = [] 
+    selected_objects = []
     for obj in Gui.Selection.getSelectionEx():
         selected_objects.append(obj.Object)
 
@@ -526,7 +524,7 @@ def main():
         s = "as of 2021.10.22, only know how to deal with mystran decks"
         raise ValueError(s)
 
-    # check that the analysis type is for a static analysis        
+    # check that the analysis type is for a static analysis
     if solver_objects[0].AnalysisType != "static":
         s = "as of 2021.10.22, only know how to deal with linear static decks"
         raise ValueError(s)
@@ -560,7 +558,7 @@ def main():
             feature_objects.append(obj)
         else:
             everything_else.append(obj)
-    
+
     # if there's anything else here, say I don't know how to handle it.
     if len(everything_else) != 0:
         s = "as of 2021.10.22, don't know how to deal with other things here."
@@ -601,23 +599,23 @@ def main():
     # for each mesh object, loop through everything else here to see if anything
     # refers to it
     material_cards = []
-    property_cards = []
+    #property_cards = []
     MID = 1
-    PID = 1
+    #PID = 1
     for index, mesh_data in enumerate(data_from_mesh_objects):
         label = MeshObjectNames[index]
-        nodes = mesh_data['nodes']
-        E2N = mesh_data['E2N']
-        E2T = mesh_data['E2T']
-        E2P = mesh_data['E2P']
-        P2M = mesh_data['P2M']
+        #nodes = mesh_data['nodes']
+        #E2N = mesh_data['E2N']
+        #E2T = mesh_data['E2T']
+        #E2P = mesh_data['E2P']
+        #P2M = mesh_data['P2M']
 
         # does mesh have a material?
         mesh_has_material = False
         if label in list(zip(*material_links))[1]:
             mesh_has_material = True
             material_label = list(zip(*material_links))[0][0]
-            # does it have more than one? 
+            # does it have more than one?
             if list(zip(*material_links))[1].count(label) > 1:
                 s = "meshes cannot have more than one material"
                 raise ValueError(s)
@@ -631,10 +629,10 @@ def main():
             if list(zip(*feature_links))[1].count(label) > 1:
                 s = "meshes cannot have more than one feature"
                 raise ValueError(s)
-        
+
         # if it has a material, make the card
         if mesh_has_material:
-            # get the material 
+            # get the material
             if is_valid_MAT1_card(material_label):
                 pass
             split_material_label = material_label.split("_")
@@ -657,4 +655,4 @@ def main():
     #bulkdata.append("ENDDATA")
 
 if __name__ == '__main__':
-   main() 
+    main()

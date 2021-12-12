@@ -1,47 +1,45 @@
 # App = FreeCAD, Gui = FreeCADGui
-from copy import copy as copy
+from collections import defaultdict
+from typing import List, Dict
 import FreeCAD, Part, Fem
 from PySide import QtGui
-import os
-import sys
 import numpy as np
-from scipy.spatial import KDTree
 
 Vector = App.Vector
+ELEMENT_TYPE_QUAD = 15
 
 class Form(QtGui.QDialog): # {{{
-    """ Set N_layers and total thickness
-    """
+    """Set N_layers and total thickness"""
     # savior --> https://doc.qt.io/qtforpython/tutorials/basictutorial/dialog.html
     # https://zetcode.com/gui/pysidetutorial/layoutmanagement/
     N_layers = 3
     thickness = 1
-    
+
     def __init__(self): # {{{
         super(Form, self).__init__()
         self.setModal(True)
         self.makeUI()
         # }}}
-        
+
     def makeUI(self): # {{{
         label_layers = QtGui.QLabel('N_layers')
         spin_layers = self.spin_layers = QtGui.QSpinBox()
         spin_layers.setValue(self.N_layers)
         spin_layers.setRange(1, 1000)
-       
+
         label_thickness = QtGui.QLabel('total thickness')
         thickness_field = self.thickness_field = QtGui.QLineEdit(str(self.thickness))
 
         btn = self.btn = QtGui.QPushButton('Thicken Shell Mesh')
         btn.clicked.connect(self.make_mesh)
-        
+
         layout = QtGui.QGridLayout()
         layout.addWidget(label_layers, 0, 0)
         layout.addWidget(spin_layers, 0, 1)
         layout.addWidget(label_thickness, 1, 0)
         layout.addWidget(thickness_field, 1, 1)
         layout.addWidget(btn, 2, 1)
-        
+
         self.setLayout(layout)
         self.show()
     # }}}
@@ -58,10 +56,10 @@ class Form(QtGui.QDialog): # {{{
     # }}}
 # }}}
 def get_E2N_nodes_and_E2T(mesh_objects_to_merge): # {{{
-    """ takes in FemMesh objects, returns a combined E2N and nodes
+    """
+    Takes in FemMesh objects, returns a combined E2N and nodes
     - [ ] Make it also return an E2T once other element types are supported
     """
-
     mesh_types_expected = []
     # check all mesh entities for pre-coded types # {{{
     for obj in mesh_objects_to_merge:
@@ -152,133 +150,150 @@ def get_E2N_nodes_and_E2T(mesh_objects_to_merge): # {{{
         nodes[new_NID] = list(obj.Nodes[old_NID])
 
     # check that there was only one type of element, and it was 15 (CQUAD4)
-
     E2T = {}
-    if len(mesh_types_expected) == 1 and mesh_types_expected[0] == 15:
+    if len(mesh_types_expected) == 1 and mesh_types_expected[0] == ELEMENT_TYPE_QUAD:
         # Populate the E2T
         for e in E2N:
-            E2T[e] = 15
+            E2T[e] = ELEMENT_TYPE_QUAD
     else:
         raise ValueError("Unknown elements passed into mesh equivalencer.")
 
-    return [E2N, E2T, nodes]
+    return E2N, E2T, nodes
 #}}}
-def get_E2NormVec(nodes, E2N): #{{{
-    """ Compute the normal vector elements
-    """
+
+def get_E2NormVec(nodes: Dict[int, List[float]], E2N): #{{{
+    """Compute the normal vector elements"""
     E2NormVec = {}
-    for EID in list(E2N.keys()):
+    for EID in E2N:
         NodeIDs = E2N[EID]
         these_nodes = []
         for N in NodeIDs:
             # get the X coord of this node ID
-            for i in list(nodes.keys()):
-                if i == N:
-                    x = nodes[i][0]
-                    y = nodes[i][1]
-                    z = nodes[i][2]
-                    these_nodes.append([N, x, y, z])
+            for nid, node in nodes.items():
+                if nid == N:
+                    x, y, z = node
+                    these_nodes.append([x, y, z])
         # compute every normal vector possible
         N = these_nodes
+
         # Get coordinates of all four points
-        P1 = np.array([N[0][1], N[0][2], N[0][3]])
-        P2 = np.array([N[1][1], N[1][2], N[1][3]])
-        P3 = np.array([N[2][1], N[2][2], N[2][3]])
-        P4 = np.array([N[3][1], N[3][2], N[3][3]])
+        P1 = np.array(N[0])
+        P2 = np.array(N[1])
+        P3 = np.array(N[2])
+        P4 = np.array(N[3])
+
         # Get vectors encircling the element
         V12 = P2 - P1
         V23 = P3 - P2
         V34 = P4 - P3
         V41 = P1 - P4
+
         # Get all the cross products
         NV1 = np.cross(V12, V23)
         NV2 = np.cross(V23, V34)
         NV3 = np.cross(V34, V41)
         NV4 = np.cross(V41, V12)
+
         # Compute average of all these vectors
         NV = NV1 + NV2 + NV3 + NV4
+
         # Normalize the magnitude
         mag = (NV[0]**2 + NV[1]**2 + NV[2]**2)**0.5
-        NV = NV/mag
-        E2NormVec[EID]= [NV[0], NV[1], NV[2]]
+        NV /= mag
+        E2NormVec[EID] = [NV[0], NV[1], NV[2]]
     return E2NormVec
     #}}}
-def get_N2NormVec(E2NormVec, E2N, nodes): # {{{
+
+def get_N2NormVec(E2NormVec: Dict[int, List[float]],
+                  E2N,
+                  nodes: Dict[int, List[float]]) -> Dict[int, List[float]]: # {{{
     """
     Bug: 2021.10.24: mag can be zero if normals aren't consistent
     """
     N2NormVec = {}
     N2E = get_N2E(E2N)
-    
+
     for NID in nodes:
         elms_with_this_node = N2E[NID]
-        X_comp = 0
-        Y_comp = 0
-        Z_comp = 0
+        x = 0.
+        y = 0.
+        z = 0.
         for EID in elms_with_this_node:
-            X_comp += E2NormVec[EID][0]
-            Y_comp += E2NormVec[EID][1]
-            Z_comp += E2NormVec[EID][2]
-        mag = ((X_comp**2) + (Y_comp**2) + (Z_comp**2))**0.5
+            vector = E2NormVec[EID]
+            x += vector[0]
+            y += vector[1]
+            z += vector[2]
+        mag = ((x**2) + (y**2) + (z**2))**0.5
         if mag == 0:
             s = "zero magnitude normal vector. Normals misaligned."
             raise ValueError(s)
-        X = X_comp/mag
-        Y = Y_comp/mag
-        Z = Z_comp/mag
-        N2NormVec[NID] = [X, Y, Z]
+        x /= mag
+        y /= mag
+        z /= mag
+        N2NormVec[NID] = [x, y, z]
     return N2NormVec
 # }}}
-def get_N2E(E2N): # {{{
-    """ Turns the E2N around, giving a dict of N2E
-    """
-    N2E = {}
-    for EID, Element in E2N.items():
+
+def get_N2E(E2N: Dict[int, List[int]]) -> Dict[int, int]: # {{{
+    """Turns the E2N around, giving a dict of N2E"""
+    # if the node's not in N2E yet, prepare for it to be
+    N2E = defaultdict(list)
+    for EID, element in E2N.items():
         # go through nodes in every element
-        for NID in Element:
-            # if the node's not in N2E yet, prepare for it to be
-            if NID not in N2E:
-                N2E[NID] = []
+        for NID in element:
             # store the EID with that node ID we're on
             N2E[NID].append(EID)
-    return N2E
+    return dict(N2E)
 # }}}
-def get_new_nodes(N_layers, thickness, nodes, N2NormVec): # {{{
+
+def get_new_nodes(N_layers: int,
+                  thickness: float,
+                  nodes: Dict[int, List[float]],
+                  N2NormVec: Dict[int, List[float]]) -> Dict[int, List[float]]: # {{{
     # create nodes translated to the correct positions as new_nodes
     new_nodes = {}
     node_ID_offset = 0
     for layer in range(N_layers+1):
         # get vector magnitude
         mag = layer * (thickness / N_layers)
-        for node in nodes.keys():
-            x = nodes[node][0] + mag * N2NormVec[node][0]
-            y = nodes[node][1] + mag * N2NormVec[node][1]
-            z = nodes[node][2] + mag * N2NormVec[node][2]
-            new_nodes[node + node_ID_offset] = [x, y, z]
-        node_ID_offset += len(nodes.keys())
+        for nid, node in nodes.items():
+            vector = N2NormVec[nid]
+            x = node[0] + mag * vector[0]
+            y = node[1] + mag * vector[1]
+            z = node[2] + mag * vector[2]
+            new_nodes[nid + node_ID_offset] = [x, y, z]
+        node_ID_offset += len(nodes)
     return new_nodes
 # }}}
-def get_new_E2N(E2N, nodes, N_layers): # {{{
+
+def get_new_E2N(E2N: Dict[int, List[int]],
+                nodes: Dict[int, List[float]],
+                N_layers: int) -> Dict[int, List[int]]: # {{{
     new_E2N = {}
     element_ID_offset = 0
+    nnodes = len(nodes)
     for layer in range(N_layers):
-        for element in E2N.keys():
-            N1 = E2N[element][0] + layer * len(nodes.keys())
-            N2 = E2N[element][1] + layer * len(nodes.keys())
-            N3 = E2N[element][2] + layer * len(nodes.keys())
-            N4 = E2N[element][3] + layer * len(nodes.keys())
-            N5 = E2N[element][0] + (layer + 1) * len(nodes.keys())
-            N6 = E2N[element][1] + (layer + 1) * len(nodes.keys())
-            N7 = E2N[element][2] + (layer + 1) * len(nodes.keys())
-            N8 = E2N[element][3] + (layer + 1) * len(nodes.keys())
-            new_EID = element + element_ID_offset
+        offset1 = layer * nnodes
+        offset2 = (layer + 1) * nnodes
+        for eid, element in E2N.items():
+            N1 = element[0] + offset1
+            N2 = element[1] + offset1
+            N3 = element[2] + offset1
+            N4 = element[3] + offset1
+
+            N5 = element[0] + offset2
+            N6 = element[1] + offset2
+            N7 = element[2] + offset2
+            N8 = element[3] + offset2
+            new_EID = eid + element_ID_offset
             new_E2N[new_EID] = [N1, N2, N3, N4, N5, N6, N7, N8]
-        element_ID_offset += len(E2N.keys())
+        element_ID_offset += len(E2N)
     return new_E2N
 # }}}
-def main(N_layers, thickness): # {{{
+
+def main(N_layers: int, thickness: float): # {{{
     # gather FemMeshObject instances from selections
-    mesh_objects_to_merge = [] 
+    mesh_objects_to_merge = []
     # gather edges from selection
     selected_edges = []
     for obj in Gui.Selection.getSelectionEx():
@@ -294,7 +309,7 @@ def main(N_layers, thickness): # {{{
             obj_edges = obj.Object.Shape.Edges
             if len(obj_edges) == 1:
                 selected_edges.append(obj_edges[0])
-            
+
     # if there are no mesh objects selected, raise an error
     if len(mesh_objects_to_merge) == 0:
         raise ValueError("No mesh entities selected.")
@@ -309,9 +324,9 @@ def main(N_layers, thickness): # {{{
 
     # Throw errors on thicken mode
     if mode == 1:
-        raise ValueError("As of 2021.08.29, no support for thicken mode 1")
+        raise ValueError("As of 2021.08.29, no support for thicken mode=1")
 
-    [E2N, E2T, nodes] = get_E2N_nodes_and_E2T(mesh_objects_to_merge)
+    E2N, E2T, nodes = get_E2N_nodes_and_E2T(mesh_objects_to_merge)
 
     # Construct element ID to normal vector data structure
     E2NormVec = get_E2NormVec(nodes, E2N)
@@ -331,20 +346,18 @@ def main(N_layers, thickness): # {{{
     thickened = Fem.FemMesh()
 
     # add all of the nodes to new container
-    for node in new_nodes.keys():
-        x = new_nodes[node][0]
-        y = new_nodes[node][1]
-        z = new_nodes[node][2]
-        thickened.addNode(x, y, z, node)
+    for nid, node in new_nodes.items():
+        x, y, z = node
+        thickened.addNode(x, y, z, nid)
 
     # create the elements of this container
-    for element in new_E2N.keys():
-        thickened.addVolume([*new_E2N[element]], element)
+    for eid, element in new_E2N.items():
+        thickened.addVolume([*element], eid)
 
     # set graphical object to render correctly
     doc = App.ActiveDocument
     obj = doc.addObject("Fem::FemMeshObject", "thickened")
-    obj.FemMesh = thickened 
+    obj.FemMesh = thickened
     obj.Placement.Base = FreeCAD.Vector(0, 0, 0)
     obj.ViewObject.DisplayMode = "Faces, Wireframe & Nodes"
     obj.ViewObject.BackfaceCulling = False
@@ -355,4 +368,3 @@ def main(N_layers, thickness): # {{{
 
 if __name__ == '__main__':
     form = Form()
-

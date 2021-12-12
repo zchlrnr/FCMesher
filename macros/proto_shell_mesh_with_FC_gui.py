@@ -1,27 +1,30 @@
+"""
+TODO:
+"""
+
 # App = FreeCAD, Gui = FreeCADGui
 import FreeCAD, Part, Fem
 from PySide import QtGui
 
 Vector = App.Vector
 
-class Form(QtGui.QDialog): # {{{
+class ShellMeshDialog(QtGui.QDialog): # {{{
     """flip the true in __name__ == '__main__' to bypass the dialogue"""
     N_elms_X = 5
     N_elms_Y = 3
-    
+
     def __init__(self): # {{{
-        super(Form, self).__init__()
+        super(ShellMeshDialog, self).__init__()
         self.setModal(True)
         self.makeUI()
     # }}}
-        
+
     def makeUI(self): # {{{
-        
         labelx = QtGui.QLabel('X elements')
         spinx = self.spinx = QtGui.QSpinBox()
         spinx.setValue(self.N_elms_X)
         spinx.setRange(1, 500)
-        
+
         labely = QtGui.QLabel('Y elements')
         spiny = self.spiny = QtGui.QSpinBox()
         spiny.setValue(self.N_elms_Y)
@@ -29,17 +32,20 @@ class Form(QtGui.QDialog): # {{{
 
         btn = self.btn = QtGui.QPushButton('Mesh')
         btn.clicked.connect(self.make_mesh)
-        
+        layout = self._make_layout(labelx, labely, spinx, spiny, btn)
+        self.setLayout(layout)
+        self.show()
+    # }}}
+
+    def _make_layout(self, labelx, labely, spinx, spiny, btn): # {{{
         layout = QtGui.QGridLayout()
         layout.addWidget(labelx, 0, 0)
         layout.addWidget(spinx, 1, 0)
         layout.addWidget(labely, 0, 1)
         layout.addWidget(spiny, 1, 1)
         layout.addWidget(btn, 2, 1)
-        
-        self.setLayout(layout)
-        self.show()
-    # }}}
+        return layout
+    #}}}
 
     def get_values(self): # {{{
         return self.N_elms_X, self.N_elms_Y
@@ -76,13 +82,13 @@ def main(N_elms_X, N_elms_Y): # {{{
 
     # get the nodes on curve_02
     N_Curve_2 = get_nodes_from_curve(Curve_02, N_elms_X)
-    
+
     # Make nodes by tracing the streamlines of the surface
     nodes = make_nodes_of_ruled_mesh(N_Curve_1, N_Curve_2, N_elms_Y)
-    
+
     # Now to make the elements
     E2N = make_elements_of_ruled_mesh(N_elms_X, N_elms_Y)
-    
+
     # computing E2Warp
     E2Warp = get_E2Warp(E2N, nodes)
 
@@ -107,7 +113,7 @@ def main(N_elms_X, N_elms_Y): # {{{
     for E in E2N:
         print(E)
         a.addFace(E[1:], E[0])
-    
+
     # Making it render correctly
     doc = App.ActiveDocument
     obj = doc.addObject("Fem::FemMeshObject", "a")
@@ -115,7 +121,7 @@ def main(N_elms_X, N_elms_Y): # {{{
     obj.Placement.Base = FreeCAD.Vector(0, 0, 0)
     obj.ViewObject.DisplayMode = "Faces, Wireframe & Nodes"
     obj.ViewObject.BackfaceCulling = True
-    
+
     doc.recompute()
 # }}}
 
@@ -153,7 +159,7 @@ def correct_curve_order_for_warp(*args): # {{{
 
 def get_E2Warp(E2N, nodes): # {{{
     """
-    compute the warping of each element according to MSC Nastran definition
+    Compute the warping of each element according to MSC Nastran definition
     According to MSC Nastran 2021 Reference Manual
     Warp Test: This test evaluates how far out of plane the four corner
     grid points are by measuring the distance of each point from a "mean"
@@ -174,7 +180,7 @@ def get_E2Warp(E2N, nodes): # {{{
         NID3 = E[3]
         NID4 = E[4]
         # scrape out data and get coords of all nodes
-        for n in nodes: 
+        for n in nodes:
             NID = n[3]
             if NID == NID1:
                 n1 = n       # [x1, y1, z1, NID1]
@@ -192,11 +198,6 @@ def get_E2Warp(E2N, nodes): # {{{
         m24x = (n2[0] + n4[0]) / 2
         m24y = (n2[1] + n4[1]) / 2
         m24z = (n2[2] + n4[2]) / 2
-        # "H" is half the distance between these points
-        dmx = m24x - m13x
-        dmy = m24y - m13y
-        dmz = m24z - m13z
-        H = 0.5 * (((dmx ** 2) + (dmy ** 2) + (dmz ** 2))**0.5)
         # computing D1
         dD1x = n3[0] - n1[0]
         dD1y = n3[1] - n1[1]
@@ -207,12 +208,18 @@ def get_E2Warp(E2N, nodes): # {{{
         dD2y = n4[1] - n2[1]
         dD2z = n4[2] - n2[2]
         D2 = ((dD2x ** 2)+(dD2y ** 2)+(dD2z ** 2)) ** 0.5
+        # "H" is half the distance between these points
+        dmx = m24x - m13x
+        dmy = m24y - m13y
+        dmz = m24z - m13z
+        H = 0.5 * (((dmx ** 2) + (dmy ** 2) + (dmz ** 2))**0.5)
+
         WC = H / 2 * (D1 + D2)
         # Append EID, WC to E2Warp
         E2Warp.append([EID, WC])
     return E2Warp
 # }}}
-    
+
 def make_elements_of_ruled_mesh(N_elms_X, N_elms_Y): # {{{
     Nx = N_elms_X + 1
     Ny = N_elms_Y + 1
@@ -243,6 +250,7 @@ def make_nodes_of_ruled_mesh(Nodes_1, Nodes_2, N_elms_Y): # {{{
     # first set of nodes will be from N_Curve_1
     NID = 0
     for i in range(N_elms_Y+1):
+        ipercent = i / N_elms_Y
         for j in range(len(Nodes_1)):
             NID += 1
             # Get coordinates of the node on Curve 1
@@ -250,9 +258,9 @@ def make_nodes_of_ruled_mesh(Nodes_1, Nodes_2, N_elms_Y): # {{{
             # Get coordinates of the node on Curve 2
             x2, y2, z2 = Nodes_2[j]
             # get location of current node in ruled surf
-            x = (x2-x1)*(i/N_elms_Y) + x1
-            y = (y2-y1)*(i/N_elms_Y) + y1
-            z = (z2-z1)*(i/N_elms_Y) + z1
+            x = (x2-x1)*ipercent + x1
+            y = (y2-y1)*ipercent + y1
+            z = (z2-z1)*ipercent + z1
             nodes.append([x, y, z, NID])
     return nodes
 # }}}
@@ -261,7 +269,7 @@ if __name__ == '__main__':
     N_elms_X, N_elms_Y = 5, 3
 
     if True:
-        form = Form()
+        form = ShellMeshDialog()
     else:
         main(N_elms_X, N_elms_Y)
 
