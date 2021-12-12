@@ -46,9 +46,20 @@ class Form(QtGui.QDialog): # {{{
 #}}}
 
 def get_NID_replacement_pairs(mesh_A_contents, mesh_B_contents, eq_tol): # {{{
-    # check if any nodes in mesh_A are within eq_tol of those in mesh_B
+    """
+    Goal: return the pairs of nodes between meshes that are within tolerance
+    - [X] get number of nodes in A
+    - [X] assembly new node IDs into a list
+    - [X] construct list of coordinates mapped identically to new IDs
+    - [X] convert coords to an nparray
+    - [X] construct a tree of the nodal data
+    - [X] query pairs of nodes to see if any are in tolerance, convert to list
+    - [X] if there's no pairs, return as is
+    - [X] if there are some pairs, check that not going to collapse elements
+    - [X] return pairs, the hash tables, and the new node ID list
+    """
+    # get number of nodes in A
     N_nodes_A = len(mesh_A_contents.Nodes) # number of nodes in A
-    N_nodes_B = len(mesh_B_contents.Nodes) # number of nodes in B
 
     # get mapping of old IDs to new IDs
     old_ID_to_new_A = {} # hash table of old ID in mesh A to new ID
@@ -92,11 +103,11 @@ def get_NID_replacement_pairs(mesh_A_contents, mesh_B_contents, eq_tol): # {{{
 
     # check that no two nodes of each pair are in the same mesh body
     for p in pairs:
-        if p[0] not in old_ID_to_new_A.values():
+        if new_NIDs[p[0]] not in old_ID_to_new_A.values():
             s = "equivolence with tolerance of " + str(eq_tol)
             s = s + " would collapse elements in mesh_B"
             raise ValueError(s)
-        if p[1] not in old_ID_to_new_B.values():
+        if new_NIDs[p[1]] not in old_ID_to_new_B.values():
             s = "equivolence with tolerance of " + str(eq_tol)
             s = s + " would collapse elements in mesh_A"
             raise ValueError(s)
@@ -109,9 +120,12 @@ def main(eq_tol):
     '''
     Goal: Take two selected femmeshes, equivalence them together
     - [X] throw error if no FemMeshes are selected
-    - [X] Throw error if a number other than two FemMeshes is selected
-    - [X] Store meshes and labels in variables
-    - [ ] Check if any nodes in mesh_A are within tolerance of mesh_B
+    - [X] throw error if a number other than two FemMeshes is selected
+    - [X] store meshes and labels in variables
+    - [X] check if any nodes in mesh_A are within tolerance of mesh_B
+    - [X] get pairs of matching nodes across meshes
+    - [X] throw message if no viable pairs exist
+    - [ ] create new unified primitives data (nodes, E2N, and E2T)
     '''
     # check that a thing is selected
     N_things_selected = 0
@@ -140,6 +154,12 @@ def main(eq_tol):
     old_nodes_in_B = data_back['old_B']
     new_NIDs = data_back['new_NIDs']
     pairs = data_back['pairs']
+
+    # if no pairs exist, print that no pairs exist, and return 
+    if len(pairs) == 0:
+        s = "With a tolerance of " + str(eq_tol) + ", no pairs exist."
+        print(s)
+        return
 
 if __name__ == '__main__':
     form = Form()
