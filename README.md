@@ -41,19 +41,8 @@ opinion.
 #### proto_shell_mesh_with_FC_gui.py
 * makes a ruled shell mesh as a ruled mesh between two curves
 
-### Solid mesh by thickened shell mesh
-
-* Inputs:
-    - Elementary shell mesh data structures and the thickness
-    - `nodes[NID] = [X_coordinte, Y_coordinate, Z_coordinate]`
-    - `E2N[EID] = [NID1, NID2, NID3, NID4]`
-    - `E2T[EID] = [TypeID]`
-    - thickness
-* Outputs:
-    - Elementary solid mesh data structures
-    - `nodes[NID] = [X_coordinte, Y_coordinate, Z_coordinate]`
-    - `E2N_offset[EID] = [NID1, NID2, NID3, NID4]`
-    - `E2T_offset[EID] = [TypeID]`
+#### solid_mesh_thicken.py
+* thickens a shell mesh along element normal vectors
 
 ## E2T Specification
 <table>
