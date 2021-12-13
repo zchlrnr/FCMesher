@@ -1,16 +1,17 @@
 # App = FreeCAD, Gui = FreeCADGui
+from typing import List
 import FreeCAD, Part, Fem
 from PySide import QtGui
 import numpy as np
-import math
+from math import ceil
 from scipy.spatial import KDTree
 Vector = App.Vector
 
 def get_E2N_nodes_and_E2T(mesh_objects_to_merge): # {{{
-    """ takes in FemMesh objects, returns a combined E2N and nodes
+    """
+    Takes in FemMesh objects, returns a combined E2N and nodes
     - [ ] Make it also return an E2T once other element types are supported
     """
-
     mesh_types_expected = []
     # check all mesh entities for pre-coded types # {{{
     for obj in mesh_objects_to_merge:
@@ -101,7 +102,6 @@ def get_E2N_nodes_and_E2T(mesh_objects_to_merge): # {{{
         nodes[new_NID] = list(obj.Nodes[old_NID])
 
     # check that there was only one type of element, and it was 15 (CQUAD4)
-
     E2T = {}
     if len(mesh_types_expected) == 1 and mesh_types_expected[0] == 15:
         # Populate the E2T
@@ -110,25 +110,24 @@ def get_E2N_nodes_and_E2T(mesh_objects_to_merge): # {{{
     else:
         raise ValueError("Unknown elements passed into mesh equivalencer.")
 
-    return [E2N, E2T, nodes]
+    return (E2N, E2T, nodes)
 #}}}
 
 def get_nodes_within_tolerance(nodes, distance, x, y, z): # {{{
-    """ Takes in nodes and distance, returns list of node IDs within distance
-    """
-    # Creating NID to index 
+    """Takes in nodes and distance, returns list of node IDs within distance"""
+    # Creating NID to index
     NID2index = {}
     index2NID = {}
     counter = 0
-    for i in list(nodes.keys()):
+    for i in nodes:
         NID2index[i] = counter
         index2NID[counter] = i
         counter += 1
 
     # constructing list of lists of node IDs
     node_coords_list = []
-    for NID in list(nodes.keys()):
-        node_coords_list.append(nodes[NID])
+    for NID, node in nodes.items():
+        node_coords_list.append(node)
     # converting node_coords_list to nparray
     node_coords_list = np.array(node_coords_list)
 
@@ -137,7 +136,6 @@ def get_nodes_within_tolerance(nodes, distance, x, y, z): # {{{
 
     nodes_within_ball = tree.query_ball_point([x, y, z], distance)
     return nodes_within_ball
-
     #}}}
 
 def main(): # {{{
@@ -150,7 +148,7 @@ def main(): # {{{
     R = 25.4 * 0.125
 
     # get mesh that's clicked on
-    mesh_objects_selected = [] 
+    mesh_objects_selected = []
     for obj in Gui.Selection.getSelectionEx():
         if obj.TypeName == "Fem::FemMeshObject":
             mesh_objects_selected.append(obj.Object.FemMesh)
@@ -161,39 +159,44 @@ def main(): # {{{
     if len(mesh_objects_selected) == 0:
         raise ValueError("No mesh entities selected.")
 
-    [E2N, E2T, nodes] = get_E2N_nodes_and_E2T(mesh_objects_selected)
+    (E2N, E2T, nodes) = get_E2N_nodes_and_E2T(mesh_objects_selected)
 
     nodes_to_mpc = get_nodes_within_tolerance(nodes, R, x, y, z)
-
     if len(nodes_to_mpc) == 0:
         print("No nodes within ",R ," units of [",x,",",y,",",z,"]")
         return
 
-    # determine how many lines the RBE3 card would have to be
-    if len(nodes_to_mpc) < 3:
-        n_rbe3_card_lines = 1
-    else:
-        n_rbe3_card_lines = 1 + math.ceil((len(nodes_to_mpc)-2)/8)
-
     # making grid ID that we'll be using as the central node
-    NID_mpc_start = max(list(nodes.keys())) + 1
+    NID_mpc_start = max(nodes) + 1
     print("GRID,"+str(NID_mpc_start)+",,"+f'{x:.3},{y:.3},{z:.3}')
 
     # getting highest EID
     EID_mpc_start = max(list(E2N.keys())) + 1
+    RBE3_lines = write_rbe3(EID_mpc_start, NID_mpc_start, nodes_to_mpc)
+    for l in RBE3_lines:
+        print(l)
+#}}}
+
+def write_rbe3(eid: int, nid: int, nodes_to_mpc: List[int]): # {{{
+    # determine how many lines the RBE3 card would have to be
+    if len(nodes_to_mpc) < 3:
+        n_rbe3_card_lines = 1
+    else:
+        n_rbe3_card_lines = 1 + ceil((len(nodes_to_mpc)-2)/8)
 
     # making rbe3 card string set
     RBE3_line1_string = "RBE3,"
-    RBE3_line1_string += str(EID_mpc_start)+",,"
-    RBE3_line1_string += str(NID_mpc_start)+","
+    RBE3_line1_string += str(eid) + ",,"
+    RBE3_line1_string += str(nid) + ","
     RBE3_line1_string += "123456,1.0,123,"
     if len(nodes_to_mpc) >= 1:
-        RBE3_line1_string += str(nodes_to_mpc[0])+","
+        RBE3_line1_string += str(nodes_to_mpc[0]) + ","
     if len(nodes_to_mpc) >= 2:
         RBE3_line1_string += str(nodes_to_mpc[1])
     if n_rbe3_card_lines == 1:
         print(RBE3_line1_string)
         return
+
     RBE3_lines = []
     RBE3_lines.append(RBE3_line1_string)
     nodes_in_line = 0
@@ -208,8 +211,7 @@ def main(): # {{{
             construction = ""
         elif i+1 == len(nodes_to_mpc)-2:
             RBE3_lines.append(construction)
-    for l in RBE3_lines:
-        print(l)
+    return RBE3_lines
 # }}}
 
 if __name__ == '__main__':
