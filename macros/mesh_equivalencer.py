@@ -116,16 +116,93 @@ def get_NID_replacement_pairs(mesh_A_contents, mesh_B_contents, eq_tol): # {{{
 
 #}}}
 
-def main(eq_tol):
+def get_nodes_from_FemMesh(mesh_object): # {{{
+    """
+    Goal: return nodes dict
+    """
+    nodes = {}
+    NIDs = mesh_object.Nodes.keys()
+    for N in NIDs:
+        nodes[N] = list(mesh_object.Nodes[N])
+    return nodes
+# }}}
+
+def get_E2N_from_FemMesh(mesh_object): # {{{
+    """
+    Goal: create and return E2N from a single mesh_object
+    """
+    E2N = {}    # Element to Node ID
+    if mesh_object.EdgeCount != 0: 
+        s = "Edges not supported as of 2021.10.16"
+        print(s)
+    if mesh_object.TriangleCount != 0: 
+        EID = max(E2N.keys(), default=0)        # Element ID
+        for face in mesh_object.Faces:
+            # if it's 3 noded, it's a TRIA3 element
+            if len(mesh_object.getElementNodes(face)) == 3:
+                EID += 1
+                OG = list(mesh_object.getElementNodes(face))    # original order
+                E2N[EID] = [OG[0], OG[1], OG[2]]  # correct order?
+                E2N[EID] = list(mesh_object.getElementNodes(face))
+    if mesh_object.QuadrangleCount != 0: 
+        EID = max(E2N.keys(), default=0)        # Element ID
+        for face in mesh_object.Faces:
+            # if it's 4 noded, it's a QUAD4 element
+            if len(mesh_object.getElementNodes(face)) == 4:
+                EID += 1
+                # un-salome'ifying
+                OG = list(mesh_object.getElementNodes(face))    # original order
+                E2N[EID] = [OG[0], OG[3], OG[2], OG[1]]  # correct order
+                E2N[EID] = list(mesh_object.getElementNodes(face))
+    if mesh_object.HexaCount != 0:       
+        EID = max(E2N.keys(), default=0)        # Element ID
+        for volume in mesh._objectVolumes:
+            # if it's 8 noded, it's a CHEXA element with 8 nodes
+            if len(mesh_object.getElementNodes(volume)) == 8:
+                EID += 1
+                # un-salome'ifying
+                OG = list(mesh_object.getElementNodes(volume))
+                E2N[EID] = \
+                [OG[6], OG[7], OG[4], OG[5], OG[2], OG[3], OG[0], OG[1]]
+            else:
+                s = "As of 2021.10.17, CHEXA 20 elements are not supported."
+                raise ValueError(s)
+    if mesh_object.TetraCount != 0:      
+        EID = max(E2N.keys(), default=0)        # Element ID
+        for volume in mesh_object.Volumes:
+            # if it's 10 noded, it's a CTETRA element with 10 nodes
+            if len(mesh_object.getElementNodes(volume)) == 10:
+                EID += 1
+                # un-salome'ifying
+                OG = list(mesh_object.getElementNodes(volume))
+                E2N[EID] = [OG[3], OG[2], OG[0], OG[1], OG[9], OG[6],\
+                            OG[7], OG[8], OG[5], OG[4]]
+            else:
+                EID += 1
+                OG = list(mesh_object.getElementNodes(volume))
+                E2N[EID] = OG.reverse()
+    if mesh_object.PyramidCount != 0: 
+        s = "Pyramids not supported as of 2021.10.16"
+        raise ValueError(s)
+    if mesh_object.PrismCount != 0: 
+        s = "Prisms not supported as of 2021.10.16"
+        raise ValueError(s)
+    return E2N
+# }}}
+
+def main(eq_tol): # {{{
     '''
-    Goal: Take two selected femmeshes, equivalence them together
+    {{{ Goal: Take two selected femmeshes, equivalence them together
     - [X] throw error if no FemMeshes are selected
     - [X] throw error if a number other than two FemMeshes is selected
     - [X] store meshes and labels in variables
     - [X] check if any nodes in mesh_A are within tolerance of mesh_B
     - [X] get pairs of matching nodes across meshes
     - [X] throw message if no viable pairs exist
-    - [ ] create new unified primitives data (nodes, E2N, and E2T)
+    - [X] create nodes of mesh_A and mesh_B
+    - [X] create E2N of mesh_A and mesh_B
+    - [ ] offset node IDs in nodes_B
+    }}}
     '''
     # check that a thing is selected
     N_things_selected = 0
@@ -160,6 +237,22 @@ def main(eq_tol):
         s = "With a tolerance of " + str(eq_tol) + ", no pairs exist."
         print(s)
         return
+
+    # get nodes_A and nodes_B
+    nodes_A = get_nodes_from_FemMesh(mesh_A_contents)
+    nodes_B = get_nodes_from_FemMesh(mesh_B_contents)
+
+    # get E2N_A and E2N_B
+    E2N_A = get_E2N_from_FemMesh(mesh_A_contents)
+    E2N_B = get_E2N_from_FemMesh(mesh_B_contents)
+
+    #  offsetting NIDs in nodes_B
+    nodes_B_new = {}
+    for NID in nodes_B.keys():
+        nodes_B_new[NID + max(nodes_A.keys())] = nodes_B[NID]
+    nodes_B = nodes_B_new
+
+ # }}}
 
 if __name__ == '__main__':
     form = Form()
